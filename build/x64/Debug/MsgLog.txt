@@ -1,0 +1,6 @@
+*************************************************
+JanusC Rev 3.2.4 (22/08/2023)
+Readout Software for CAEN FERS-5200
+*************************************************
+ERROR: Can't open configuration file Janus_Config.txt
+

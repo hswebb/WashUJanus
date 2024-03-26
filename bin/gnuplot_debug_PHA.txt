@@ -1,0 +1,6 @@
+set title 'ToT Summary'
+bind z 'set cbrange [0:574]'
+set cbrange [0:574]
+set title 'TESTING'
+unset grid; set palette model CMY rgbformulae 7,5,15
+plot 'PlotData.txt' with image

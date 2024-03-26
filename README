@@ -1,0 +1,43 @@
+------------------------------------------------------------------------------
+  CAEN SpA
+  Via Vetraia, 11 - 55049 - Viareggio ITALY
+  +390594388398 - www.caen.it
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+
+    Janus README
+    
+------------------------------------------------------------------------------
+
+TABLE OF CONTENTS
+------------------
+
+A.  SYSTEM REQUIREMENTS
+B.  INSTALLATION
+C.  SUPPORT
+
+
+A. SYSTEM REQUIREMENTS
+-----------------------
+   
+  - Microsoft Windows (>)10 or Linux
+  - python 3 (>3.8 suggested) with tkinter
+  - g++ <= 11 (linux)
+   
+
+B. INSTALLATION
+----------------
+
+Windows:
+	- run bin/JanusPy.pyw for GUI mode or bin/JanusC.exe for console mode
+
+Linux:
+	- cd in Janus directory
+	- run sudo sh Janus_Install.sh and check if any required package is missing
+	- run bin/JanusPy.pyw for GUI mode or bin/JanusC for console mode
+
+C. SUPPORT   
+-----------
+        
+For technical support, go to https://www.caen.it/mycaen/support/ (login and MyCAEN+ account required)

@@ -1,0 +1,107 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="File di intestazione">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="File di risorse">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="File di origine">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\configure.c">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\console.c">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FERSlib.c">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FERSutils.c">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\outputfiles.c">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\paramparser.c">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plot.c">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\JanusC.c">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FERS_LLeth.c">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FERS_LLusb.cpp">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Statistics.c">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\MultiPlatform.c">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FERS_LLtdl.c">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\FERS_readout.c">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\configure.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\console.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FERSlib.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FERSutils.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\outputfiles.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\paramparser.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\plot.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\JanusC.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Statistics.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MultiPlatform.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FERS_LL.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FERS_LLusb.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\FERS_Registers_5202.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\bin\Janus_Config.txt">
+      <Filter>File di risorse</Filter>
+    </Text>
+  </ItemGroup>
+</Project>
