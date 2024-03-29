@@ -885,23 +885,58 @@ int RunTimeCmd(int c)
 	if (c == 'L') {
 		memset(WDcfg.RunTitle, 0, 81);
 		printf("\nEnter title for this run (Max. 80 characters, type \"empty\" for blank title):\n");
-		scanf("%80[^\n]s", WDcfg.RunTitle);
+		if (SockConsole)
+			Con_GetString(WDcfg.RunTitle, 80);
+		else
+			myscanf("%80[^\n]s", WDcfg.RunTitle);
+		WDcfg.RunTitle[strcspn(WDcfg.RunTitle, "\n")] = 0;
 		if (strcmp(WDcfg.RunTitle, "empty") == 0) {
 			printf("Title will be empty!\n");
 			memset(WDcfg.RunTitle, 0, 81);
 		}
 	}
-	if (c == 'R') {
-		printf("\nEnter the run number:\n");
+
+	if (c == 'N') {
+		printf("\nEnter a run number:\n");
 		int runNumber = -1;
-		if (scanf("%d", &runNumber) || runNumber > -1) {
+		if (!Con_GetInt(&runNumber) && runNumber > -1) {
 			RunVars.RunNumber = runNumber;
 			SaveRunVariables(RunVars);
 		} else {
 			printf("Wrong input received! No change made!\n");
 			while (getchar() != '\n');
 		}
-    }
+	}
+
+	if (c == 'i') {
+		printf("\nEnter a source ID:\n");
+		int sourceID = -1;
+		if (!Con_GetInt(&sourceID) && sourceID > -1) {
+			WDcfg.SourceID = sourceID;
+		} else {
+			printf("Wrong input received! No change made!\n");
+			while (getchar() != '\n');
+		}
+	}
+
+	if (c == 'a') {
+		if (WDcfg.UseBarrier) {
+			printf("\nTurning OFF using barrier\n");
+		} else {
+			printf("\nTurning ON using barrier\n");
+		}
+		WDcfg.UseBarrier = !WDcfg.UseBarrier;
+	}
+
+	if (c == 'u') {
+		bool isEnabled = (WDcfg.OutFileEnableMask&0x8000) >> 15;
+		if (isEnabled) {
+			printf("\nTurning OFF using RingBuffer output\n");
+		} else {
+			printf("\nTurning ON using RingBuffer output\n");
+		}
+		WDcfg.OutFileEnableMask ^= 0x8000;
+	}
 
 	if ((c == ' ') && !SockConsole) {
 		printf("[q] Quit\n");
@@ -929,8 +964,11 @@ int RunTimeCmd(int c)
 		printf("[!] Reset IP address\n");
 		printf("[#] Print Pixel Map\n");
         printf("[T] Print FPGA temp\n");
+		printf("[u] Toggle use RingBuffer output (FRIB)\n");
+		printf("[a] Toggle use barrier in RingStateChangeItem (FRIB)\n");
+		printf("[i] Set source ID (FRIB)\n");
 		printf("[L] Set title for RingStateChangeItem (FRIB)\n");
-		printf("[R] Set run number\n");
+		printf("[N] Set run number (FRIB)\n");
 		c = Con_getch();
 		RunTimeCmd(c);
 	}
@@ -1010,12 +1048,14 @@ int main(int argc, char* argv[])
 	int a1, a2, AllocSize;
 	int ROmode;
 	char port[6] = "";
+	bool devnull = false;
 
 	// Get command line options
 	for (i = 1; i < argc; i++) {
 		if (argv[i][0] == '-') {
 			if (strcmp(argv[i] + 1, "g") == 0) SockConsole = 1;
 			if (argv[i][1] == 'p') strcpy(port, &argv[i][2]);
+			if (argv[i][1] == 'd') devnull = true;
 			if (argv[i][1] == 'c') strcpy(ConfigFileName, &argv[i][2]);
 			if (argv[i][1] == 'u') {
 				if (argc > (i + 2)) {
@@ -1203,7 +1243,7 @@ ReadCfg:
 	// -----------------------------------------------------
 	// Open plotter
 	// -----------------------------------------------------
-	OpenPlotter();
+	OpenPlotter(devnull);
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++
 Restart:  // when config file changes or a new run of the job is scheduled, the acquisition restarts here // BUG: it does not restart when job is enabled, just when preset time or count is active

@@ -21,7 +21,7 @@
 #include "FERSlib.h"
 #include "Statistics.h"
 
-int OpenPlotter();
+int OpenPlotter(bool devnull = false);
 int ClosePlotter();
 int PlotSpectrum();
 int PlotCntHisto();
