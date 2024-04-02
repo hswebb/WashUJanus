@@ -885,11 +885,12 @@ int RunTimeCmd(int c)
 	if (c == 'L') {
 		memset(WDcfg.RunTitle, 0, 81);
 		printf("\nEnter title for this run (Max. 80 characters, type \"empty\" for blank title):\n");
-		if (SockConsole)
-			Con_GetString(WDcfg.RunTitle, 80);
-		else
+		int strlen = 0;
+		if (SockConsole) {
+			strlen = Con_GetString(WDcfg.RunTitle, 80);
+			WDcfg.RunTitle[strcspn(WDcfg.RunTitle, "\r")] = 0;
+		} else
 			myscanf("%80[^\n]s", WDcfg.RunTitle);
-		WDcfg.RunTitle[strcspn(WDcfg.RunTitle, "\n")] = 0;
 		if (strcmp(WDcfg.RunTitle, "empty") == 0) {
 			printf("Title will be empty!\n");
 			memset(WDcfg.RunTitle, 0, 81);
@@ -916,6 +917,21 @@ int RunTimeCmd(int c)
 		} else {
 			printf("Wrong input received! No change made!\n");
 			while (getchar() != '\n');
+		}
+	}
+
+	if (c == 'B') {
+		memset(WDcfg.RingBufferName, 0, 50);
+		printf("\nEnter output RingBuffer name (Max. 49 characters, Default 'janus'):\n");
+		int strlen = 0;
+		if (SockConsole) {
+			strlen = Con_GetString(WDcfg.RingBufferName, 49);
+			WDcfg.RingBufferName[strcspn(WDcfg.RingBufferName, "\r")] = 0;
+		} else
+			strlen = myscanf("%49[^\n]s", WDcfg.RingBufferName);
+		if (strlen == 0) {
+			printf("Default RingBuffer name is used: janus\n");
+			strncpy(WDcfg.RingBufferName, "janus", 50);
 		}
 	}
 
@@ -967,6 +983,7 @@ int RunTimeCmd(int c)
 		printf("[u] Toggle use RingBuffer output (FRIB)\n");
 		printf("[a] Toggle use barrier in RingStateChangeItem (FRIB)\n");
 		printf("[i] Set source ID (FRIB)\n");
+		printf("[B] Set output RingBuffer name (FRIB)\n");
 		printf("[L] Set title for RingStateChangeItem (FRIB)\n");
 		printf("[N] Set run number (FRIB)\n");
 		c = Con_getch();

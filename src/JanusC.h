@@ -173,7 +173,7 @@ typedef struct Config_t {
 	int AskHVShutDownOnExit;		// Ask if the HV must be shut down before quitting
 	int OutFileEnableMask;			// Enable/Disable output files 
 	int SourceID;                   // Source ID in FRIBDAQ stack (FRIB)
-	char RingBufferName[500];       // RingBuffer Name (FRIB)
+	char RingBufferName[50];       // RingBuffer Name (FRIB)
 	char RunTitle[81];              // Run title for RingStateChangeItem (FRIB)
 	bool UseBarrier;                // Use barrier for RingStateChangeItem (FRIB)
 	char DataFilePath[500];			// Output file data path
