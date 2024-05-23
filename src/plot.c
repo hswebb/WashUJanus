@@ -25,7 +25,7 @@
 FILE *plotpipe = NULL;
 int LastPlotType = -1; 
 int LastPlotName = -1;
-const int debug = 1;
+const int debug = 0;
 
 #ifdef _WIN32
 #define GNUPLOT_COMMAND  "..\\gnuplot\\gnuplot.exe"
@@ -767,9 +767,9 @@ int Plot2DSummary()
 
 	// Output histogram data to file
 	pd = fopen("PlotData.txt", "w");
-	for (i = 0; i < MAX_NCH; i++) {
+	for (x = 0; x < MAX_NCH; x++) {
+		i = (RunVars.PlotType == PLOT_TOT_SUM_FIB) ? ((x - (32 * (x / 32))) * 2) + (1 * (x / 32)) : x;
 		tempHisto = &Stats.H1_ToT[brd][i];
-		x = (RunVars.PlotType == PLOT_TOT_SUM_FIB) ? (i / 2) + (32 * (i % 2)) : i;
 		for (y = 0; y < Nbin; y++) {
 			pixz = tempHisto->H_data[y];
 			fprintf(pd, "%d %d %d\n", x, y, pixz);

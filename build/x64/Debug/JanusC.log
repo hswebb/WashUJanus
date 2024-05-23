@@ -1,12 +1,3 @@
-﻿  FERSutils.c
-  JanusC.c
-  Statistics.c
-  configure.c
-  outputfiles.c
-C:\Users\h.s.webb\Desktop\Janus_3.2.4_Windows_20230822\src\configure.c(155,29): warning C4146: unary minus operator applied to unsigned type, result still unsigned
-  paramparser.c
-  plot.c
-  Generating Code...
-C:\Users\h.s.webb\Desktop\Janus_3.2.4_Windows_20230822\src\outputfiles.c(207,1): warning C4715: 'WriteListfileHeader': not all control paths return a value
+﻿  plot.c
   JanusC.vcxproj -> C:\Users\h.s.webb\Desktop\Janus_3.2.4_Windows_20230822\build\x64\Debug\JanusC.exe
           1 file(s) copied.
