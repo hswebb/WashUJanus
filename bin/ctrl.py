@@ -214,8 +214,8 @@ class CtrlPanel():
 		self.combobox_writing.set(0)
 
 		Label(parent, text="Plot Type").place(relx=float(x0)/sh.Win_W, rely=float(y0)/sh.Win_H)  #  x=x0, y = y0)
-		self.plot_options_v = ['Spect LG','Spect HG','Spect ToA', 'Spect ToT', 'TrgRate-Ch', 'MultiCh Scaler', 'Waveform','2D-TrgRate','2D-Charge LG', '2D-Charge HG', 'Staircase', 'HoldDelay-Scan', 'ToT Summary']
-		self.plot_options = ['Spect LG','Spect HG','Spect ToA', 'Spect ToT', 'TrgRate-Ch','Waveform','2D-TrgRate','2D-Charge LG', '2D-Charge HG', 'Staircase', 'HoldDelay-Scan', 'MultiCh Scaler', 'ToT Summary']
+		self.plot_options_v = ['Spect LG','Spect HG','Spect ToA', 'Spect ToT', 'TrgRate-Ch', 'MultiCh Scaler', 'Waveform','2D-TrgRate','2D-Charge LG', '2D-Charge HG', 'Staircase', 'HoldDelay-Scan', 'ToT Summary (channel)', 'ToT Summary (fiber)']
+		self.plot_options = ['Spect LG','Spect HG','Spect ToA', 'Spect ToT', 'TrgRate-Ch','Waveform','2D-TrgRate','2D-Charge LG', '2D-Charge HG', 'Staircase', 'HoldDelay-Scan', 'MultiCh Scaler', 'ToT Summary (channel)', 'ToT Summary (fiber)']
 		self.plot_type = StringVar()
 		self.plot_type.trace('w', lambda name, index, mode: self.SaveRunVars())  #  , width=15
 		ttk.Combobox(parent, values=self.plot_options_v, textvariable=self.plot_type, state='readonly').place(relx=float(x0)/sh.Win_Ctrl_W, rely=float(y0+20)/sh.Win_H, relwidth=113./sh.Win_W, relheight=21./sh.Win_H)  #   x=x0, y=y0+20)

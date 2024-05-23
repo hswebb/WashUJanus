@@ -107,6 +107,7 @@
 #define PLOT_SCAN_HOLD_DELAY			10
 #define PLOT_MCS_TIME					11	// DNIN those value have to be sorted later
 #define PLOT_TOT_SUM                    12
+#define PLOT_TOT_SUM_FIB                13
 
 #define SMON_CHTRG_RATE					0
 #define SMON_CHTRG_CNT					1

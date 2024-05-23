@@ -730,7 +730,7 @@ int Plot2DSummary()
 	if (debug) debbuff = fopen("gnuplot_debug_PHA.txt", "w");
 
 	// Declare and initialize variables
-	int brd, ch, x, y, ycalib, Nbin, pixz;
+	int brd, ch, i, x, y, ycalib, Nbin, pixz;
 	double la0, la1 = 0;
 	double a0, a1;
 	char yunit[50];
@@ -751,20 +751,25 @@ int Plot2DSummary()
 	// Plot type specific initialization
 	Nbin = 0;
 	if (RunVars.PlotType == PLOT_TOT_SUM) {
-		fprintf(plotpipe, "set title 'ToT Summary (board %d)'\n", brd);
-		if (debug) fprintf(debbuff, "set title 'ToT Summary'\n");
-		strcpy(yunit, Stats.H1_ToT[0][0].x_unit);
-		Nbin = Stats.H1_ToT[0][0].Nbin;
-		la0 = Stats.H1_ToT[brd][0].A[0];
-		la1 = Stats.H1_ToT[brd][0].A[1];
+		fprintf(plotpipe, "set title 'ToT Summary by Channel (board %d)'\n", brd);
+		if (debug) fprintf(debbuff, "set title 'ToT Summary by Channel (board %d)'\n", brd);
 	}
+	else if (RunVars.PlotType == PLOT_TOT_SUM_FIB) {
+		fprintf(plotpipe, "set title 'ToT Summary by Fiber (board %d)'\n", brd);
+		if (debug) fprintf(debbuff, "set title 'ToT Summary by Fiber (board %d)'\n", brd);
+	}
+	strcpy(yunit, Stats.H1_ToT[0][0].x_unit);
+	Nbin = Stats.H1_ToT[0][0].Nbin;
+	la0 = Stats.H1_ToT[brd][0].A[0];
+	la1 = Stats.H1_ToT[brd][0].A[1];
 	a0 = ycalib ? la0 : 0;
 	a1 = ycalib ? la1 : 1;
 
 	// Output histogram data to file
 	pd = fopen("PlotData.txt", "w");
-	for (x = 0; x < MAX_NCH; x++) {
-		tempHisto = &Stats.H1_ToT[brd][x];
+	for (i = 0; i < MAX_NCH; i++) {
+		tempHisto = &Stats.H1_ToT[brd][i];
+		x = (RunVars.PlotType == PLOT_TOT_SUM_FIB) ? (i / 2) + (32 * (i % 2)) : i;
 		for (y = 0; y < Nbin; y++) {
 			pixz = tempHisto->H_data[y];
 			fprintf(pd, "%d %d %d\n", x, y, pixz);
@@ -780,7 +785,10 @@ int Plot2DSummary()
 		|| LastA0 != la0 || LastA1 != la1) {
 		fprintf(plotpipe, "clear\n");
 		fprintf(plotpipe, "set terminal wxt noraise title 'FERS Readout' size 1200,800 position 700,10\n");
-		fprintf(plotpipe, "set xlabel 'Detector ID'\n");
+		if (RunVars.PlotType == PLOT_TOT_SUM)
+			fprintf(plotpipe, "set xlabel 'Channel #'\n");
+		if (RunVars.PlotType == PLOT_TOT_SUM_FIB)
+			fprintf(plotpipe, "set xlabel 'Fiber #'\n");
 		fprintf(plotpipe, "set xrange [-0.5:%f]\n", ((float)MAX_NCH) - 0.5);
 		fprintf(plotpipe, "bind x 'set [-0.5:%f]'\n", ((float)MAX_NCH) - 0.5);
 		fprintf(plotpipe, "set xtics auto\n");

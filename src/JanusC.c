@@ -1650,7 +1650,8 @@ Restart:  // when config file changes or a new run of the job is scheduled, the 
 				else if (RunVars.PlotType == PLOT_SCAN_THR) 			PlotStaircase();
 				else if (RunVars.PlotType == PLOT_SCAN_HOLD_DELAY)		PlotScanHoldDelay(&HoldScan_newrun);
 				else if (RunVars.PlotType == PLOT_CHTRG_RATE) 			PlotCntHisto();
-				else if (RunVars.PlotType == PLOT_TOT_SUM)              Plot2DSummary();
+				else if ((RunVars.PlotType == PLOT_TOT_SUM) ||
+					(RunVars.PlotType == PLOT_TOT_SUM_FIB))             Plot2DSummary();
 				OneShot = 0;
 			}
 			print_time = curr_time;
