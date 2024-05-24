@@ -682,13 +682,15 @@ int RunTimeCmd(int c)
 			printf("9 = ScanThr (StairCase)\n");
 			printf("a = ScanDelay\n");
 			printf("b = MultiCh Scaler\n");
-			printf("c = ToT Summary\n");
+			printf("c = ToT Summary (channels)\n");
+			printf("d = ToT Summary (fibers)\n");
 		}
 		c = tolower(Con_getch());
 		if ((c >= '0') && (c <= '9')) RunVars.PlotType = c - '0';
 		else if (c == 'a') RunVars.PlotType = 10;
 		else if (c == 'b') RunVars.PlotType = 11;
 		else if (c == 'c') RunVars.PlotType = 12;
+		else if (c == 'd') RunVars.PlotType = 13;
 	}
 	if (c == 'y') {	// staircase
 		int nstep;

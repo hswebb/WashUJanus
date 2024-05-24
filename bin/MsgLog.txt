@@ -1,4 +1,3 @@
-Console Socket connected
 *************************************************
 JanusC Rev 3.2.4 (22/08/2023)
 Readout Software for CAEN FERS-5200
@@ -6,14 +5,5 @@ Readout Software for CAEN FERS-5200
 Reading configuration file Janus_Config.txt
 Reading Pixel Map pixel_map.txt
 Opening connection to usb:25797
-Connected to usb:25797
-FPGA FW revision = 4.0 (Build = 6719)
-uC FW revision = 21071501
-PID = 25797
-Total allocated memory = 12.51 MB
-Configuring Boards ... Done.
-ERROR: recv failed with error: 10054
-ERROR: send data to socket failed
-Quitting ...
-ERROR: send data to socket failed
-Quitting...
+ERROR: Can't open board 0 at usb:25797
+
