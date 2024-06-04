@@ -819,11 +819,15 @@ int RunTimeCmd(int c)
 			printf("9 = ScanThr (StairCase)\n");
 			printf("a = ScanDelay\n");
 			printf("b = MultiCh Scaler\n");
+			printf("c = ToT Summary (channels)\n");
+			printf("d = ToT Summary (fibers)\n");
 		}
 		c = tolower(Con_getch());
 		if ((c >= '0') && (c <= '9')) RunVars.PlotType = c - '0';
 		else if (c == 'a') RunVars.PlotType = 10;
 		else if (c == 'b') RunVars.PlotType = 11;
+		else if (c == 'c') RunVars.PlotType = 12;
+		else if (c == 'd') RunVars.PlotType = 13;
 	}
 	if (c == 'y' && !offline_conn) {	// staircase
 		int nstep;
@@ -1927,6 +1931,12 @@ Restart:  // when config file changes or a new run of the job is scheduled, the 
 				} else if ((RunVars.PlotType == PLOT_CHTRG_RATE) &&
 					(offline_plot || (AcqStatus == ACQSTATUS_RUNNING) || plot_changed)) {
 					PlotCntHisto();
+					plot_changed = 0;
+				}
+				else if (((RunVars.PlotType == PLOT_TOT_SUM) ||
+					(RunVars.PlotType == PLOT_TOT_SUM_FIB)) &&
+					(offline_plot || (AcqStatus == ACQSTATUS_RUNNING) || plot_changed)) {
+					Plot2DSummary();
 					plot_changed = 0;
 				}
 			}

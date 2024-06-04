@@ -1,0 +1,31 @@
+﻿  configure.c
+  console.c
+  FERSlib.c
+  FERSutils.c
+  FERS_LLeth.c
+  FERS_LLtdl.c
+  FERS_LLusb.cpp
+  FERS_readout.c
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.39.33519\include\algorithm(3433,25): warning C4244: 'argument': conversion from 'wchar_t' to 'unsigned char', possible loss of data
+  (compiling source file '../src/FERS_LLusb.cpp')
+  C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.39.33519\include\algorithm(3433,25):
+  the template instantiation context (the oldest one first) is
+  	C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\FERS_LLusb.cpp(106,10):
+  	see reference to function template instantiation '_OutIt std::transform<std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,USBDEV::CheckIfPresentAndGetUSBDevicePath::<lambda_6be5c994d12843c0536f3394ba5b26e5>>(const _InIt,const _InIt,_OutIt,_Fn)' being compiled
+          with
+          [
+              _OutIt=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+              _Elem=wchar_t,
+              _InIt=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+              _Fn=USBDEV::CheckIfPresentAndGetUSBDevicePath::<lambda_6be5c994d12843c0536f3394ba5b26e5>
+          ]
+  
+  MultiPlatform.c
+  outputfiles.c
+  paramparser.c
+  plot.c
+  JanusC.c
+  Statistics.c
+  Generating Code...
+  JanusC.vcxproj -> C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\JanusC.exe
+          1 file(s) copied.

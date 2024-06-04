@@ -1,0 +1,14 @@
+C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\configure.c;C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\configure.obj
+C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\console.c;C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\console.obj
+C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\FERSlib.c;C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\FERSlib.obj
+C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\FERSutils.c;C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\FERSutils.obj
+C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\FERS_LLeth.c;C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\FERS_LLeth.obj
+C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\FERS_LLtdl.c;C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\FERS_LLtdl.obj
+C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\FERS_LLusb.cpp;C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\FERS_LLusb.obj
+C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\FERS_readout.c;C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\FERS_readout.obj
+C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\MultiPlatform.c;C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\MultiPlatform.obj
+C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\outputfiles.c;C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\outputfiles.obj
+C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\paramparser.c;C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\paramparser.obj
+C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\plot.c;C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\plot.obj
+C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\JanusC.c;C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\JanusC.obj
+C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\src\Statistics.c;C:\Users\h.s.webb\Desktop\Janus_5202_3.6.0_20240514_windows\build\x64\Debug\Statistics.obj
