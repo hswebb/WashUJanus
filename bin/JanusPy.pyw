@@ -17,6 +17,8 @@ from tkinter import messagebox
 from tkinter.commondialog import Dialog
 from tkinter.ttk import Progressbar, Style
 from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory
+
+from PIL import ImageTk, Image
 #import tk_tools
 
 import shared as sh
@@ -26,11 +28,15 @@ import ctrl as ctrl
 import tabs as tabs
 import ctypes
 
+
+
 if sys.platform.find('win') == 0:
 	ctypes.windll.shcore.SetProcessDpiAwareness(2) # PROCESS_PER_MONITOR_DPI_AWARE = 2
 
 params = sh.params
 sections = sh.sections
+
+ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 # ------------------------------------------------------------------
 class Open_GUI(Frame):
@@ -42,6 +48,8 @@ class Open_GUI(Frame):
 		# images and logos
 		if sys.platform.find('win') < 0:
 			sh.ImgPath = '../img/'
+		
+		# print(os.getcwd())
 		self.img_logo = PhotoImage(file=sh.ImgPath + "logo.png").subsample(3, 3)
 
 		# define main window properties
@@ -60,6 +68,10 @@ class Open_GUI(Frame):
 		self.bglabel.place(relx=logo_W/sh.Win_W, rely=200/sh.Win_H)
 		self.master.update()
 
+		# Image for error and warning no blocking pop-up
+		self.warning_image = ImageTk.PhotoImage(Image.open(fp="{}warning.png".format(sh.ImgPath),mode='r').resize((45,41)))  #reduce(133))  # Computed as img.height/40
+		self.error_image = ImageTk.PhotoImage(Image.open(fp="{}error.png".format(sh.ImgPath),mode='r').resize((50,50)))   #reduce(12))	# Computed as img.height/50
+
 		self.Ctrl = ctrl.CtrlPanel()
 		self.Ctrl.OpenControlPanel(self.master)
 		self.Ctrl.plugged.trace('w', lambda name, index, mode: self.DAQconnect())
@@ -69,7 +81,7 @@ class Open_GUI(Frame):
 		self.Tabs.combobox_state(1)
 
 		self.Tabs.CfgChanged.trace('w', lambda name, index, mode:self.Set_b_apply()) # To prevent overwrite of Janus_Config when a run of a job is performed
-		self.Tabs.ActiveBrd.trace('w', lambda name, index, mode: self.AssignActiveBd())  # self.Ctrl.active_board.set(str(self.Tabs.ActiveBrd.get())))
+		self.Tabs.ActiveBrd.trace('w', lambda name, index, mode: self.AssignActiveBrd())  # self.Ctrl.active_board.set(str(self.Tabs.ActiveBrd.get())))
 		# self.Ctrl.bstart.trace('w', lambda name, index, mode:self.Set_b_apply())
 		self.Ctrl.CfgReloaded.trace('w', lambda name, index, mode:self.Tabs.Params2Tabs(self.Ctrl.CfgReloaded.get()))
 		self.Ctrl.CfgFileName.trace('w', lambda name, index, mode:self.CfgLoadOnLog(self.Ctrl.CfgFileName.get())) 
@@ -80,13 +92,19 @@ class Open_GUI(Frame):
 
 		# set gui apparence according to acq mode		
 		self.guimodegui = StringVar()
-		self.guimodegui.set('a')
-		self.guimodegui.trace('w', lambda name, index, mode:self.Tabs.update_guimode(self.guimodegui.get()))
+		self.guimodegui.set(self.Ctrl.guimode.get())   #  'a') 
+		self.guimodegui.trace('w', lambda name, index, mode:self.update_guimode())
 		self.Tabs.par_def_svar["AcquisitionMode"].trace('w', lambda name, index, mode:self.Tabs.update_guimode(self.guimodegui.get(), 0))
+		self.Tabs.par_def_svar["EnableJobs"].trace("w", lambda name, index, mode: self.Tabs.update_guimode(self.guimodegui.get()))
 		self.Tabs.update_guimode(self.guimodegui.get())
 		
-		self.DebugGUI = IntVar()
-		self.DebugGUI.set(0)
+		self.verbose = {}
+		self.verbose['socket'] = IntVar()
+		self.verbose['socket'].set(0)
+		self.verbose['service'] = IntVar()
+		self.verbose['service'].set(0)
+		self.OfflineJanus = False	# Raw data process only
+		# self.DebugGUI.trace('w', lambda name, index, mode: self.LibDumpMsg())
 
 		self.OpenAndFWupg = IntVar()
 		self.OpenAndFWupg.set(0)
@@ -95,20 +113,53 @@ class Open_GUI(Frame):
 		self.bglabel.place_forget()
 
 		# start thread for reading messages from the client and print to output window
-		self.stop_thread = False
-		self.t = Thread(target=self.ClientMsg)
-		self.t.daemon = True # thread dies with the program
-		self.t.start()
+		# self.stop_thread = False
+		# self.t = Thread(target=self.ClientMsg)
+		# self.t.daemon = True # thread dies with the program
+		# self.t.start()
 
 	
 	# *******************************************************************************
 	# Assign Active brd using 'trace' function with try/except syntax
+	# *******************************************************************************
 	def AssignActiveBrd(self):
 		try: self.Ctrl.active_board.set(str(self.Tabs.ActiveBrd.get()))
 		except: pass
 
-	# *******************************************************************************
 
+	# *******************************************************************************
+	# Change guimode visualization
+	# *******************************************************************************
+	def update_guimode(self):
+		if (self.guimodegui.get() == 'b'):
+			self.menu_mode.delete("Verbose socket messages")
+		if (self.guimodegui.get() == 'a'):
+			self.menu_mode.add_checkbutton(label="Verbose socket messages", variable=self.verbose['socket'], command=lambda: self.check_radioVerbose('socket'))
+		self.Ctrl.guimode.set(self.guimodegui.get())
+		self.Tabs.update_guimode(self.guimodegui.get())
+
+
+	def check_radioVerbose(self, key1: str):
+		if key1 == 'service': key2 = 'socket'
+		else: key2 = 'service'
+		if self.verbose[key1].get() and self.verbose[key2].get():
+			self.verbose[key2].set(0)
+
+
+	# *******************************************************************************
+	# Activate LowLevel dump messages with the GUI verbose
+	# *******************************************************************************
+	# def LibDumpMsg(self):
+	# 	if self.DebugGUI.get():
+	# 		cfg.cfg_file_list.append(sh.LLDumpMsg)
+	# 	else:
+	# 		cfg.cfg_file_list.remove(sh.LLDumpMsg)
+		
+	# 	self.Ctrl.len_macro.set(len(cfg.cfg_file_list))
+	# 	self.Ctrl.SaveCfgFile()
+	# 	return 0	
+
+	# *******************************************************************************
 	# Write on Log Tab
 	# *******************************************************************************
 	def Set_b_apply(self):
@@ -119,9 +170,11 @@ class Open_GUI(Frame):
 		# else:
 		# 	self.Ctrl.b_apply.configure(bg = "red", state = NORMAL)
 
+
 	def CfgLoadOnLog(self, myname):
 		print("Load configuration from '" + myname + "'\n")
 		self.Tabs.set_output_log("Load configuration from '" + myname + "'\n")
+
 
 	def CfgSaveOnLog(self, myname):
 		if myname.find("ACOPY_") != -1:	# not used at the moment
@@ -131,6 +184,7 @@ class Open_GUI(Frame):
 			self.Tabs.set_output_log("Save configuration as '" + myname + "'\n")
 			print("Save configuration as '" + myname + "'\n")
 
+
 	def NotifyCsvStarted(self):
 		mytext = "Converting to CSV format the following binary files:\n"
 		for name in self.Ctrl.Bin_fname:
@@ -139,6 +193,7 @@ class Open_GUI(Frame):
 		mytext = mytext + "Please, check the opened shell to monitor the CSV conversion status ...\n"
 
 		self.Tabs.set_output_log(mytext)
+
 
 	# GUI self warning
 	def WrittenEmptyEntries(self):
@@ -181,7 +236,7 @@ class Open_GUI(Frame):
 		self.mGuiMenu = Menu(self.master)
 		self.menu_file = Menu(self.mGuiMenu, tearoff=0)
 		self.menu_file.add_command(label='Load Config File', command=self.Ctrl.ReadCfgFile)
-		self.menu_file.add_command(label='Save Config File', command=self.Ctrl.SaveCfgFile)
+		# self.menu_file.add_command(label='Save Config File', command=self.Ctrl.SaveCfgFile)
 		self.menu_file.add_command(label='Save Config File As', command=self.Ctrl.SaveCfgFileAs)
 		self.menu_file.add_command(label="Load Macro", command=self.Ctrl.OpenExternalCfg)
 		# self.menu_file.add_command(label="Reset Plotter", command=lambda:comm.SendCmd('G'))
@@ -192,10 +247,12 @@ class Open_GUI(Frame):
 		# self.menu_FWupgrade.add_command(label='Upgrade uC', command=self.uCupgrade)
 		self.menu_FWupgrade.add_command(label='Restore IP 192.168.50.3', command=self.RestoreIP)
 		self.menu_mode = Menu(self.mGuiMenu, tearoff=0)
-		self.menu_mode.add_radiobutton(label='Basic', variable=self.guimodegui, value='b')
-		self.menu_mode.add_radiobutton(label='Advanced',variable=self.guimodegui, value='a')
+		self.menu_mode.add_radiobutton(label='Basic', variable=self.guimodegui, value='b')  
+		self.menu_mode.add_radiobutton(label='Advanced',variable=self.guimodegui, value='a')  
 		self.menu_mode.add_checkbutton(label="Show warning pop-up", variable=self.Ctrl.show_warning)
-		self.menu_mode.add_checkbutton(label="Verbose socket messages", variable=self.DebugGUI)
+		self.menu_mode.add_checkbutton(label="Verbose service event", variable=self.verbose['service'], command=lambda: self.check_radioVerbose('service'))
+		if self.Ctrl.guimode.get() == 'a':
+			self.menu_mode.add_checkbutton(label="Verbose socket messages", variable=self.verbose['socket'], command=lambda: self.check_radioVerbose('socket'))
 		self.menu_help = Menu(self.mGuiMenu, tearoff=0)
 		self.menu_help.add_command(label='About', command=self.Help_About)
 
@@ -216,18 +273,23 @@ class Open_GUI(Frame):
 	# *******************************************************************************
 	def DAQconnect(self):
 		if self.Ctrl.plugged.get() == 1:
+			self.stop_thread = False
+			self.t = Thread(target=self.ClientMsg)
+			self.t.daemon = True # thread dies with the program
+			self.t.start()
 			self.Ctrl.SetAcqStatus(1, 'Connecting JanusC...')
 			self.Tabs.status_now = 1
 			cfg.status = 1
 			self.Tabs.TabsUpdateStatus(1)
-			t = Thread(target=self.DAQconnect_Thread)
-			t.daemon = True # thread dies with the program
-			t.start()
+			t1 = Thread(target=self.DAQconnect_Thread)
+			t1.daemon = True # thread dies with the program
+			t1.start()
 		else:	
+			self.stop_thread = True
 			comm.SendCmd('V0')	# Stop updating
-			time.sleep(0.1)		# 			
+			time.sleep(0.2)		# 			
 			comm.SendCmd('q0')	# Closing
-			time.sleep(0.1)
+			time.sleep(0.2)
 			self.CheckHVIsOn()	# Check if HV is still on
 			time.sleep(0.1)
 			# comm.SendCmd('q')
@@ -237,6 +299,7 @@ class Open_GUI(Frame):
 			self.Tabs.status_now = 0
 			cfg.status = 0
 			
+
 	def DAQconnect_Thread(self):
 		fname = "JanusC.exe"
 		if sys.platform.find('win') < 0: fname = "JanusC"
@@ -246,7 +309,6 @@ class Open_GUI(Frame):
 			messagebox.showwarning(title=None, message=Jmsg)
 			self.Ctrl.plugged.set(0)
 			return
-
 		if comm.SckConnected == 0:
 			# start PyCROS
 			ON_POSIX = 'posix' in sys.builtin_module_names
@@ -264,8 +326,10 @@ class Open_GUI(Frame):
 		# brd_hvon = [i for i in range(sh.MaxBrd) if self.Tabs.HVcb_status[i].get()]
 		mmsg = ""
 		timeout2 = time.time() + 4 # in case "Quitting" got lost during communication
-		while "WARNING" not in mmsg and "Quitting" not in mmsg:
-			try: mmsg = comm.GetString()
+		while "WARNING" not in mmsg:
+			try: 
+				mmsg = comm.GetString()
+				if "Quit" in mmsg: break
 			except: break
 			if time.time() > timeout2: break	
 		if "WARNING" in mmsg:
@@ -273,6 +337,7 @@ class Open_GUI(Frame):
 			res = messagebox.askyesno("Shut HV down?", mmsg[1:])
 			if res: comm.SendCmd("y") # DNIN: a confirm of the turn off is needed?
 			else: comm.SendCmd("n")	
+
 
 	def CloseAndQuit(self):
 		if cfg.status == 4: # JanusC is in Running
@@ -282,7 +347,9 @@ class Open_GUI(Frame):
 		comm.SendCmd('V0')	# Stop update 
 		self.stop_thread = True
 		time.sleep(0.1)
-		if self.t.is_alive(): self.t.join()
+		try: 
+			if self.t.is_alive(): self.t.join()
+		except: pass
 		if comm.SckConnected and not comm.SckError:
 			comm.SendCmd('q0')
 			time.sleep(0.1)
@@ -298,12 +365,69 @@ class Open_GUI(Frame):
 				self.Ctrl.plugged.set(0)
 
 		# Dump on file LogGUI
-		if self.DebugGUI.get():
+		if any(list(tval.get() for tval in self.verbose.values())):   #self.verbose['socket'].get() or self.verbose['service'].get():
 			with open("JanusPyLog.log", "w") as f:
-				for line in self.Tabs.Output.dump(1.0, END, test=True):
+				for line in self.Tabs.Output.dump(1.0, END, text=True):
 					f.write(line[1])
 
 		self.quit()
+
+
+	# *******************************************************************************
+	# Customized not blocking message box for warning during run 
+	# *******************************************************************************
+	# Insert \n in a string in order to fit a label of a given width
+	def parse_string(self, mmsg: str, lab_len:int, mframe: Frame):
+		# Create temp label to get the string dimension inside a label
+		temp_label = Label(mframe, text=mmsg)
+		temp_label.update_idletasks()  # Update the label to ensure it's fully configured
+		tlw = temp_label.winfo_reqwidth()
+		temp_label.destroy()
+		if (tlw > lab_len):
+			r=(lab_len)/tlw
+			inLen = int(len(mmsg)*r)  # The string position where to cut
+			# Find the closest space before the cut position:
+			for pos in range(inLen,-1,-1):
+				if mmsg[pos].isspace():
+					r = pos
+					break
+		else: return mmsg
+
+		nmsg = mmsg[0:r] + "\n" + self.parse_string(mmsg[r+1:], lab_len, mframe)
+		return nmsg
+	
+	# Create a no-blocking messagebox of error and warning with fixed dimension
+	def j_messagebox(self, type: str, msg: str):
+		selfJanusMsgBox = Toplevel()
+		self.t_fname = "."
+		x_l = 450
+		y_l = 180
+		selfJanusMsgBox.geometry("{}x{}+{}+{}".format(x_l, y_l, 150, 400))
+		selfJanusMsgBox.wm_title(type.upper())
+		selfJanusMsgBox.resizable(False, False)
+		# selfJanusMsgBox.attributes('-toolwindow', True)
+		# selfJanusMsgBox.grab_set()
+		selfJanusMsgBox.protocol("WM_DELETE_WINDOW", selfJanusMsgBox.destroy)  # self.CloseJanusMsgBox)
+		# Pop-up frames
+		msgFrame = Frame(selfJanusMsgBox, bg='white')
+		msgFrame.place(relx=0, rely=0, relwidth=1, relheight=1)
+		btnFrame = Frame(selfJanusMsgBox)
+		btnFrame.place(relx=0, y=y_l-40, relwidth=1, relheight=0.35)
+		# Message label and OK button
+		nmsg = self.parse_string(msg, x_l-90, msgFrame)
+		msgLabel = Label(msgFrame, text = nmsg, justify=LEFT, bg='white')
+		msgLabel.place(x=75, rely=0.05, relheight=0.68, width=x_l-90)
+		Button(btnFrame, text='OK', bg='white', relief=GROOVE, command=selfJanusMsgBox.destroy).place(x=x_l-100, y=10, height=22, width=80)
+		
+		# Image of warning and error
+		if type.upper() == 'WARNING':
+			img_label = Label(msgFrame, image=self.warning_image, bg='white')
+			img_label.image = self.warning_image
+			img_label.place(relx=0.035,rely=0.28, width=50, height=50)
+		elif type.upper() == 'ERROR':
+			img_label = Label(msgFrame, image=self.error_image, bg='white')
+			img_label.image = self.error_image
+			img_label.place(relx=0.04,rely=0.28, width=50, height=50)
 
 
 	# *******************************************************************************
@@ -326,6 +450,10 @@ class Open_GUI(Frame):
 				self.Tabs.UpdateStatsTab('0')
 				continue
 			if comm.SckConnected:
+				try: self.Tabs.Mtabs_nb.index('current')
+				except: 
+					time.sleep(100)
+					continue
 				if (list(self.Tabs.Mtabs)[self.Tabs.Mtabs_nb.index('current')] == 'HV_bias'):
 					if enable_hvmon == 0: comm.SendCmd('V1')
 					enable_hvmon = 1
@@ -333,22 +461,38 @@ class Open_GUI(Frame):
 					if enable_hvmon == 1: comm.SendCmd('V0')
 					enable_hvmon = 0
 			
-			cmsg = comm.GetString()  # server.recv_data() from socket
+			cmsg_ansi = comm.GetString()  # server.recv_data() from socket
+			cmsg = ansi_escape.sub('', cmsg_ansi)
 			if len(cmsg) > 0:
-				if self.DebugGUI.get():
+				if any(list(tval.get() for tval in self.verbose.values())):  	# self.verbose['socket'].get() or self.verbose['service'].get():
+					if cmsg[0] != 'h' and self.verbose['service'].get(): continue	# print only serivice event
 					print("Message from board: ", cmsg)	# debug
 					forgrd = "verbose"
 					with open("JanusPylog.log", "a") as f:
-						f.write("Message from board: ", cmsg)
+						f.write(f"Message from board: {cmsg}")
 					if cmsg[0] != 'm' or cmsg != 'w':	# Verbose message
 						self.Tabs.set_output_log(cmsg[1:] + "\n", forgrd)
 				if cmsg[0] != 'w' and pcmsg == 'w':	# print Warning on LOG and raise a warning pop-up
-					if self.Ctrl.show_warning.get(): messagebox.showwarning(title=None, message="WARNING(s)!!!\n\n" + wmsg, parent=self.master)
-					self.Ctrl.RisedWarning.set(1)
+					if self.Ctrl.show_warning.get():
+						self.j_messagebox('warning', "WARNING(s)!!!\n" + wmsg.rstrip())  #self.Tabs.Mtabs_nb.select('.!notebook.!frame10')
+						# if self.Tabs.status_now == sh.ACQSTATUS_RUNNING:	# During Run does not show tkinter pop-up
+						# 	self.j_messagebox('warning', "WARNING(s)!!!\n\n" + wmsg.rstrip())  #self.Tabs.Mtabs_nb.select('.!notebook.!frame10')
+						# else:
+						# 	self.launch_popup('warning', "WARNING(s)!!!\n\n" + wmsg.rstrip()) 
+						# 	# messagebox.showwarning(title=None, message="WARNING(s)!!!\n\n" + wmsg)#, parent=self.master)
+
+					if 'Service Event' in wmsg or 'OVERHEATING' in wmsg:
+						self.Ctrl.statled.set_color('yellow')
+					else:
+						self.Ctrl.RisedWarning.set(1)
+					
 					self.Tabs.set_output_log("WARNING(s)!!!\n" + wmsg, 'warning')
 					wmsg = ""					
 					pcmsg = cmsg[0]
 				#dest = sdata[0].decode('utf-8')
+				if cmsg[0] == 'Q':
+					# print("I am going to Close everything")
+					self.Ctrl.plugged.set(0)
 				if cmsg[0] == 'm':  # log message (to LogMsg panel)
 					forgrd = 'normal'
 					if cmsg.find("ERROR") != -1: 
@@ -362,12 +506,18 @@ class Open_GUI(Frame):
 					pr_status = self.Tabs.status_now # DNIN: Can be done simpler?
 					self.Tabs.status_now = status
 					cfg.status = status
-					self.Ctrl.SetAcqStatus(status, status_msg)	# With cmsg[0]=='R' there is a redundance
+					self.Ctrl.SetAcqStatus(status, status_msg, self.OfflineJanus)	# With cmsg[0]=='R' there is a redundance
 					self.Tabs.TabsUpdateStatus(status)
+					if status == sh.ACQSTATUS_HW_CONNECTED:
+						self.Tabs.update_guimode(self.guimodegui.get())
 					if status == sh.ACQSTATUS_ERROR: 
 						self.Tabs.set_output_log('\n', 'normal')
+						self.j_messagebox("error", cmsg[3:].rstrip())
+						# messagebox.showerror("ERROR", cmsg[3:])
+						comm.SendCmd("K") # Reset error status
 					if status == sh.ACQSTATUS_READY: 
-						self.mGuiMenu.entryconfig("FWupgrade", state="normal")
+						if not self.OfflineJanus: 
+							self.mGuiMenu.entryconfig("FWupgrade", state="normal")
 						if pr_status == 2: #!= status: # Only when connect 
 							comm.SendCmd("\t{}".format(self.Tabs.change_statistics.get()))
 							time.sleep(1)
@@ -377,6 +527,7 @@ class Open_GUI(Frame):
 						if "Progress" in status_msg:
 							self.UpgStat.configure(text = f"{status_msg}%")
 						else:
+							self.write_uBlaze_version(status_msg)
 							self.UpgStat.configure(text = status_msg)
 						s = status_msg.split()
 						if len(s) > 1 and s[0].find('Progress') >= 0:
@@ -384,10 +535,11 @@ class Open_GUI(Frame):
 							else: self.upg_progress['value'] = float(s[1])
 				elif cmsg[0] == 'F': # Firmware not found
 					ret = messagebox.askyesno("FPGA Firmware not found", cmsg[1:-8])
+					brd_noFW = list(filter(lambda x: x.isdigit() ,cmsg.replace(".", "").split()))[0]			
 					if ret: 
 						self.OpenAndFWupg.set(1)
 						comm.SendCmd('y')
-						self.FPGAupgrade()
+						self.FPGAupgrade(brd_noFW)
 						# self.mGuiMenu.entryconfig("FWupgrade", state="normal")
 					else: comm.SendCmd('n')				
 				elif cmsg[0] == 'i': # board info
@@ -411,16 +563,62 @@ class Open_GUI(Frame):
 					self.Tabs.UpdateStatsTab(cmsg)
 				elif cmsg[0] == 'R' and (not int(sh.params['EnableJobs'].default)): # Decoupling RunNumber in enable job
 					self.Ctrl.RunNumber.set(int(cmsg[1:]))
+				elif cmsg[0] == 'e':
+					self.Tabs.set_output_log('\n', 'normal')
+					self.Tabs.set_output_log(cmsg[1:], 'error')
+					self.j_messagebox("ERROR", cmsg[3:])
+					# messagebox.showerror("ERROR", cmsg[3:])
 				elif cmsg[0] == 'w': # Create the Warning message	
 					pcmsg = 'w'
 					my_msg = cmsg[10:].split(':')
-					try:
-						wmsg = wmsg + self.Tabs.param_rename[my_msg[0]] + ":" + my_msg[1]
-					except:
-						wmsg = wmsg + my_msg[0] + ":" + my_msg[1]
+					if len(my_msg) > 1:
+						try:
+							wmsg = wmsg + self.Tabs.param_rename[my_msg[0]] + ":" + my_msg[1]
+						except:
+							wmsg = wmsg + my_msg[0] + ":" + my_msg[1]
+					else:
+						wmsg += my_msg[0]
 					# wmsg = wmsg + cmsg[10:]
 				elif cmsg[0] == "u": # Messages related to frmware upgrade fails
 					if self.Ctrl.show_warning.get(): messagebox.showwarning(title=None, message=cmsg[1:] + wmsg, parent=self.master)
+				elif cmsg[0] == 's':
+					if 'offline' in cmsg[1:]:
+						self.OfflineJanus = True
+						self.Tabs.offline = True
+						self.Tabs.button_names['EnableJobs'][0]['state'] = DISABLED
+					if 'online' in cmsg[1:]:
+						self.OfflineJanus = False
+						self.Tabs.offline = False
+						self.Tabs.button_names['EnableJobs'][0]['state'] = NORMAL
+				elif cmsg[0] == 'M':
+					tmp_par = cmsg[1:].split(':') # [Par_Name, Par_Values]
+					tmp_val = ""
+					tmp_lval = {}
+					tmp_type = "g"
+					if tmp_par[0] == "StartRunMode": tmp_val = sh.STARTRUN_MODE[int(tmp_par[1])]
+					if tmp_par[0] == "HV_Vbias": 
+						hv_set = {index:value for index, value in enumerate(self.Tabs.par_brd_svar[tmp_par[0]]) if len(value.get().strip()) > 0}
+						if len(hv_set) == 0: # Just global HV bias set
+							tmp_val = tmp_par[1].split(',')[0].split()[1] # Values are NAMEPAR: brd val, brd val, brd val ...
+							tmp_type = 'g'
+						else:	# Board set in python
+							if float(self.Tabs.par_def_svar[tmp_par[0]].get()) < 20: self.Tabs.par_def_svar[tmp_par[0]].set(20)
+							elif float(self.Tabs.par_def_svar[tmp_par[0]].get()) > 85: self.Tabs.par_def_svar[tmp_par[0]].set(85)
+							tmp_lval = {int(t.split()[0]):int(t.split()[1]) for t in tmp_par[1].split(',')}
+							tmp_type = 'b'							
+							
+					if tmp_type == "g": # global parameter
+						self.Tabs.par_def_svar[tmp_par[0]].set(tmp_val)
+					elif tmp_type == 'b': # board parameter
+						for b,v in tmp_lval.items():
+							if len(self.Tabs.par_brd_svar[tmp_par[0]].get()):	# Overwrite only when values are actually written
+								self.Tabs.par_brd_svar[tmp_par[0]][b].set(str(v))
+					self.Ctrl.SaveCfgFile()
+				elif cmsg[0] == 'd':	# Get the time to attach JanusC for debugging with GUI
+					ret = messagebox.showinfo("JanusC", cmsg[1:])
+					comm.SendCmd('1')
+				elif cmsg[0] == 'p':   # Force print on log tab. This as workaround to not show the missing SrvEnt pop up
+					self.Tabs.set_output_log(cmsg[1:], "normal")
 			else:	
 				time.sleep(0.1)
 
@@ -428,25 +626,30 @@ class Open_GUI(Frame):
 	# *******************************************************************************
 	# Firmware Upgrade
 	# *******************************************************************************
+	def write_uBlaze_version(self, smsg:str):
+		if 'key' in smsg or 'version' in smsg or 'timestamp' in smsg:
+			self.Tabs.set_output_log("\nuBlaze version:\n" + smsg + "\n", "normal")
+
+
 	def notify_succesfull(self, func):
 		messagebox.showinfo(title=func, message=f"{func} succesfully completed!")
-		if self.OpenAndFWupg.get():
-			self.Ctrl.plugged.set(0)
-			self.OpenAndFWupg.set(0)
-
 		self.CloseUpgradeWin()
-
+		if self.OpenAndFWupg.get():
+			comm.SendCmd('q')
+			self.OpenAndFWupg.set(0)
 
 	def uCupgrade(self):
 		os.startfile("AllInOneJar.jar")
+
 
 	def RestoreIP(self):
 		if (self.Tabs.BrdEnable[1].get() == 0) and ("usb" in self.Tabs.conn_path[0].get()):
 			comm.SendCmd('!')
 		else:
 			messagebox.showwarning(title=None, message="IP restore only with single board connected via USB")
-		
-	def FPGAupgrade(self):
+
+
+	def FPGAupgrade(self, brd:str = '0'):
 		if self.UpgradeWinIsOpen: self.CloseUpgradeWin()
 		self.UpgradeWin = Toplevel()
 		self.t_fname = "."
@@ -459,7 +662,7 @@ class Open_GUI(Frame):
 		self.UpgradeWinIsOpen = True
 		self.FWupg_fname = ''
 		self.Tbrd = StringVar()
-		self.Tbrd.set('0')
+		self.Tbrd.set(brd)
 		#if os.path.isfile("FWupgfile.txt"):
 		#	ff = open("FWupgfile.txt", "r")
 		#	self.FWupg_fname = ff.readline()
@@ -493,6 +696,7 @@ class Open_GUI(Frame):
 	def ChangeBrd(self):
 		self.CurrVers.configure(text = "Current Version: " + self.Tabs.info_fpga_fwrev[int(self.Tbrd.get())].cget('text'))
 
+
 	def DoUpgrade(self):
 		if len(self.FWupg_fname) < 3: return
 		#ff = open("FWupgfile.txt", "w")
@@ -517,7 +721,7 @@ class Open_GUI(Frame):
 			line = fw_file.readline()	# each line is in format: b'#### \r\n'
 			for cnt in range(10):
 				if b"Rev" in line:
-					self.info_new_fw.append(str(fw_file.readline()).split()[0].split("'")[1][:-4])	# Removed \r\n
+					self.info_new_fw.append(str(fw_file.readline()).split()[0].split("'")[1])	# Removed \r\n
 				if b"Build" in line:
 					self.info_new_fw.append(''.join(filter(lambda x: x.isalnum(), str(fw_file.readline())[1:-4])))
 				if b"Board" in line:
@@ -598,10 +802,13 @@ mGui.geometry("{}x{}+{}+{}".format(Gui_W, sh.Win_H, 10, 10)) # sh.Win_W
 # mGui.tk.call('tk', 'scaling', 1.0) # test
 
 
+
 mGui.title('Janus')
 mGui.resizable(True, True)
 
 app = Open_GUI(master=mGui)	# ok it works 
 
 mGui.mainloop()
+
+
 

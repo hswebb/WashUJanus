@@ -2,7 +2,7 @@
 Vers 1
 # Format:
 # Scope:         'g' = global, 'b' = board, 'c' = channel
-# Type:          'd' = int decimal, 'h' = int hex, 'f' = float, 's' = string, 'c' = combo, 'b' = booleand, 'u' = int or float with units
+# Type:          'd' = int decimal, 'h' = int hex, 'f' = float, 's' = string, 'c' = combo, 'b' = boolean, 'u' = int or float with units
 # Special Types: 'm' = monitor (showed in GUI but not saved to cfg file), '-' no parameter (graphic separators)
 
 # Name							Default_Value		Scope	Type	Description
@@ -14,7 +14,7 @@ Open 							"eth:192.168.50.3"	b		s
 #---------------------------------------------------------------------------------------
 [HV_bias]
 #---------------------------------------------------------------------------------------
-HV_Vbias						"62.5 V"			b		fu		# Bias voltage (common to all channels, fine adjustable channel by channel by "HV_IndivAdj")
+HV_Vbias						"62.5 V"			b		fu		# Bias voltage, Range=[20 V, 85 V] (common to all channels, fine adjustable channel by channel by "HV_IndivAdj")
 HV_Imax							"10.0 mA"			b		fu		# Max current provided by the HV. The HV will be shut down if the current exceeds this limit.
 HV_Adjust_Range					"4.5"				g		c		# DAC range for the individual HV adjust. 
 	- "4.5"
@@ -60,14 +60,25 @@ RunNumber_AutoIncr				0					g		b		# Run Number auto increment
 _BLANK							-					-		-
 OutputFiles  					-					-		-
 #______________________________________________________________
-
+DataAnalysis					ALL					g		c		# Data Analysis Enable/disable mask
+	- ALL
+	- CNT_ONLY
+	- DISABLED
 DataFilePath					DataFiles			g		s		# Destination folder to save the output files 
 OF_OutFileUnit					LSB					g		c		# ToA and ToT unit
 	- LSB
 	- ns
+OF_EnMaxSize					0					g		b		# Enable List file maximum size (Raw, binary, ASCII, CSV)
+OF_MaxSize						"1 GB"				g		fu		# Max size of List files (in Bytes), minimum size allowed 1 kB
+OF_ListLL						DISABLED			g		c		# Event List file (Raw data). SAVE: enabling raw data files saving. LOAD: enabling raw data files reading and events processing
+	- DISABLED
+	- SAVE
+	- LOAD
 OF_ListBin						0					g		b		# Event List file (binary)
 OF_ListAscii 					0					g		b		# Event List file (ASCII) 
-OF_Sync 						0					g		b		# List with BrdID-Tstamp-TrgID (for sync check) 
+OF_ListCSV						0					g		b		# Event List file (CSV)
+OF_Sync 						0					g		b		# List with BrdID-Tstamp-TrgID (for sync check)
+OF_ServiceInfo 					0					g		b		# Service event info (temperature, Vmon, Imon, HVstatus)
 OF_RunInfo						0					g		b		# Run Info
 OF_SpectHisto					0					g		b		# PHA spectrum
 OF_ToAHisto						0					g		b		# ToA spectrum
@@ -116,7 +127,7 @@ CountingMode					SINGLES				g		c		# SINGLES: each channel counts its own self tr
 	- SINGLES
 	- PAIRED_AND
 	
-PairedCnt_CoincWin				"8 ns"				g		du		# Coincidence window for Paired_And counting mode. Min = 8 ns, Max = 2032 ns, Step = 8 ns
+ChTrg_Width						"8 ns"				g		du		# Coincidence window for Paired_And counting mode. Min = 8 ns, Max = 2032 ns, Step = 8 ns
 
 EnableCntZeroSuppr				1					g		b		# Enable the suppression of the channels with 0 counts in COUNTING mode.
 
@@ -130,6 +141,9 @@ TriggerLogic					OR64				g		c		# Trigger Logic (Combinatorial network with 64 se
 	- OR32_AND2
 	- MAJ64
 	- MAJ32_AND2
+	- OR_QUAD
+	
+Tlogic_Width					"0 ns"				g		du		# TriggerLogic output width (0=linear)
 
 MajorityLevel					2					g		d		# Majority Level (1 to 64)
 

@@ -36,18 +36,21 @@ class socket2daq:
 		self.s.settimeout(5.0)
 		self.conn, self.addr = self.s.accept()
 
+
 	def dismiss(self):
 		self.s.close()
 		self.stopthread = True
 		self.rxrdy = 0
 		if self.t.is_alive(): self.t.join()
 			
+
 	def RX_thread(self):
 		rxbuff = bytes('', encoding='utf-8')
 		wait_for_size = True
 		msize = 0
 		while not self.stopthread :
 			self.mutex.acquire()
+			# print("Received:", rxbuff)
 			if self.rxrdy:
 				self.mutex.release()
 				time.sleep(0.1)
@@ -76,6 +79,7 @@ class socket2daq:
 				msize = 0
 				self.mutex.release()
 
+
 	def recv_data(self):
 		self.mutex.acquire()
 		if self.rxrdy:
@@ -88,6 +92,7 @@ class socket2daq:
 
 	def send_cmd(self, cmd):
 		dataout = bytes(cmd, encoding='utf-8')
+		# print("Send:", dataout)
 		try:
 			self.conn.send(dataout)
 		except socket.error as msg:

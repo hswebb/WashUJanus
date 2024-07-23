@@ -32,6 +32,7 @@ int CloseOutputFiles();
 int SaveRawData(uint32_t *buff, int nw);
 int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq);
 int SaveHistos();
+int WriteTempHV(ServEvent_t sev[FERSLIB_MAX_NBRD]);
 int SaveRunInfo();
 //int SaveMeasurement();
 

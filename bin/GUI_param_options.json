@@ -1,0 +1,14 @@
+{
+	"StopRunMode": {
+		"type": "job",
+		"J": [
+			"PRESET_TIME",
+			"PRESET_COUNTS"
+		],
+		"N": [
+			"MANUAL",
+			"PRESET_TIME",
+			"PRESET_COUNTS"
+		]
+	}
+}

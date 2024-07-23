@@ -53,6 +53,10 @@ void t_BinaryData::Init(uint8_t force_ns, uint8_t mode) {
     t_BinaryData::t_trigger_ID = 0;
     t_BinaryData::t_ch_mask = 0;
     t_BinaryData::t_num_of_hit = 0;
+    t_BinaryData::t_unit[0] = "LSB";
+    t_BinaryData::t_unit[1] = "ns";
+    t_BinaryData::t_unit_tstamp[0] = "LSB";
+    t_BinaryData::t_unit_tstamp[1] = "us";
 }
 
 void t_BinaryData::ReadHeaderBinfile(std::ifstream& binfile) {
@@ -121,49 +125,73 @@ void t_BinaryData::WriteCsvHeader(std::ofstream& csvfile) {
     std::string date = std::asctime(std::localtime(&tt));
 
     date.erase(std::remove(date.begin(), date.end(), '\n'), date.cend());
-
+    
+    // Header in comment block
+    csvfile << " //************************************************\n";
     uint8_t time_unit = t_time_unit || t_force_ns;
-    if (t_BinaryData::t_data_format >= 32) 
-        csvfile << "Janus " << t_brd_ver << " Release " << t_s_sw_version << "\n";
+    if (t_BinaryData::t_data_format >= 32)
+        csvfile << "//Board:" << t_brd_ver << "\n//File_Format_Version:" << t_s_data_version << "\n//Janus_Release " << t_s_sw_version << "\n";
 
-    if (t_BinaryData::t_acq_mode == ACQMODE_SPECT) {
-        csvfile << "Spect mode\n";
+    csvfile << "//Acquisition_Mode:";
+    if ((t_BinaryData::t_acq_mode&0x0F) == ACQMODE_SPECT) {
+        csvfile << "Spectroscopy\n";
         if (t_BinaryData::t_data_format >= 31)
-            csvfile << "Energy Histo Bin Number = " << t_en_bin << "\n";
-        if (t_BinaryData::t_data_format >=32) 
-            csvfile << "Run " << t_run_num << " started at " << date << "\n";
-
-        csvfile << "TStamp,Trg_Id,Board_Id,ChannelMask,CH_Id,Data_type,PHA_LG,PHA_HG\n";
-    }
-    if (t_BinaryData::t_acq_mode == ACQMODE_TIMING) {
-        csvfile << "Timing mode\n";
-        if (t_BinaryData::t_data_format >= 31) {
-            csvfile << "ToA/ToT LSB value = " << t_LSB_ns << " ns \n";
-            csvfile << "Time unit = " << t_BinaryData::t_unit[t_time_unit] << " \n";
+            csvfile << "//Energy_Histo_NBins:" << t_en_bin << "\n";
+        if (t_BinaryData::t_data_format >= 32) {
+            csvfile << "//Run#:" << t_run_num << "\n//Start_Time_Epoch:" << t_start_run << "\n";
+            csvfile << "//Start_Time_DateTime:" << date << "\n";
         }
-        if (t_BinaryData::t_data_format >= 32)
-            csvfile << "Run " << t_run_num << " started at " << date << "\n";
+        csvfile << "//************************************************\n";
+        
+        csvfile << "TStamp,";
+        if ((t_BinaryData::t_acq_mode&0xF0) == DTQ_RTSTAMP)
+            csvfile << "Rel_Tstamp,";
 
+        csvfile << "Trg_Id,Board_Id,Num_hits,ChannelMask,CH_Id,Data_type,PHA_LG,PHA_HG\n";
+    }
+    if ((t_BinaryData::t_acq_mode&0x0F) == ACQMODE_TIMING) {
+        csvfile << "Timing\n";
+        if (t_BinaryData::t_data_format >= 31) {
+            csvfile << "//Time_LSB_Value_ns:" << t_LSB_ns << "\n";
+            csvfile << "//Time_Unit:" << t_BinaryData::t_unit[t_time_unit] << "\n";
+        }
+        if (t_BinaryData::t_data_format >= 32) {
+            csvfile << "//Run#:" << t_run_num << "\n//Start_Time_Epoch:" << t_start_run << "\n";
+            csvfile << "//Start_Time_DateTime:" << date << "\n";
+        }
+        csvfile << "//************************************************\n";
         csvfile << "TStamp,Board_Id,Num_hits,CH_Id,Data_type,ToA_" << t_BinaryData::t_unit[t_time_unit] << ",ToT_" << t_BinaryData::t_unit[t_time_unit] << " \n";
     }
-    if (t_BinaryData::t_acq_mode == ACQMODE_TSPECT) {
-        csvfile << "Spect-Timing mode\n";
+    if ((t_BinaryData::t_acq_mode&0x0F) == ACQMODE_TSPECT) {
+        csvfile << "SpectTiming\n";
         if (t_BinaryData::t_data_format >= 31) {
-            csvfile << "Energy Histo Num Bin = " << t_en_bin << "\n";
-            csvfile << "ToA/ToT LSB value = " << t_LSB_ns << " ns \n";
-            csvfile << "Time unit = " << t_BinaryData::t_unit[t_time_unit] << " \n";
+            csvfile << "//Energy_Histo_NBins:" << t_en_bin << "\n";
+            csvfile << "//Time_LSB_Value_ns:" << t_LSB_ns << "\n";
+            csvfile << "//Time_Unit:" << t_BinaryData::t_unit[t_time_unit] << "\n";
         }
-        if (t_BinaryData::t_data_format >= 32)
-            csvfile << "Run " << t_run_num << " started at " << date << "\n";
+        if (t_BinaryData::t_data_format >= 32) {
+            csvfile << "//Run#:" << t_run_num << "\n//Start_Time_Epoch:" << t_start_run << "\n";
+            csvfile << "//Start_Time_DateTime:" << date << "\n";
+        }
+        csvfile << " //************************************************\n";
 
-        csvfile << "TStamp,Trg_Id,Board_Id,ChannelMask,CH_Id,Data_type,PHA_LG,PHA_HG,ToA_" << t_BinaryData::t_unit[t_time_unit] << ",ToT_" << t_BinaryData::t_unit[t_time_unit] << " \n";
+        csvfile << "TStamp,";
+        if ((t_BinaryData::t_acq_mode & 0xF0) == DTQ_RTSTAMP)
+            csvfile << "Rel_TStamp,";
+        csvfile << "Trg_Id,Board_Id,Num_hits,ChannelMask,CH_Id,Data_type,PHA_LG,PHA_HG,ToA_" << t_BinaryData::t_unit[t_time_unit] << ",ToT_" << t_BinaryData::t_unit[t_time_unit] << " \n";
     }
-    if (t_BinaryData::t_acq_mode == ACQMODE_COUNT) {
+    if ((t_BinaryData::t_acq_mode&0x0F) == ACQMODE_COUNT) {
         csvfile << "Counting mode\n";
-        if (t_BinaryData::t_data_format >= 32)
-            csvfile << "Run " << t_run_num << " started at " << date << "\n";
+        if (t_BinaryData::t_data_format >= 32) {
+            csvfile << "//Run#:" << t_run_num << "\n//Start_Time_Epoch:" << t_start_run << "\n";
+            csvfile << "//Start_Time_DateTime:" << date << "\n";
+        }
+        csvfile << " //************************************************\n";
 
-        csvfile << "TStamp,Trg_Id,Board_Id,ChannelMask,CH_Id,Counts\n";
+        csvfile << "TStamp,";
+        if ((t_BinaryData::t_acq_mode & 0xF0) == DTQ_RTSTAMP)
+            csvfile << "Rel_TStamp,";
+        csvfile << "Trg_Id,Board_Id,Num_hits,ChannelMask,CH_Id,Counts\n";
     }
 }
 
@@ -171,16 +199,20 @@ void t_BinaryData::ReadEvtHeader(std::ifstream& binfile) {
     binfile.read((char*)&t_evt_size, sizeof(t_evt_size));
     binfile.read((char*)&t_brd, sizeof(t_brd));
     binfile.read((char*)&t_tstamp, sizeof(t_tstamp));
+    if (t_acq_mode & DTQ_RTSTAMP) binfile.read((char*)&t_rel_tstamp, sizeof(t_rel_tstamp));
 }
 
 void t_BinaryData::ReadTmpEvt(std::ifstream& binfile) {
     ReadEvtHeader(binfile);
     uint16_t myrsize = t_evt_size;
 
-    if (t_acq_mode != 2) {
+    if ((t_acq_mode&0X0F) != DTQ_TIMING) {
+        uint16_t header_size = 216;
+        if (t_acq_mode & DTQ_RTSTAMP)
+            header_size += 64;    // The RelTstamp is present
         binfile.read((char*)&t_trigger_ID, sizeof(t_trigger_ID));
         binfile.read((char*)&t_ch_mask, sizeof(t_ch_mask));
-        myrsize -= 216 / 8;  // 64*3 + 16 + 8
+        myrsize -= header_size / 8;  // 64*3 + 16 + 8
     } else {
         binfile.read((char*)&t_num_of_hit, sizeof(uint16_t));
         myrsize -= 104 / 8;  // 64 + 16*2 + 8
@@ -188,11 +220,11 @@ void t_BinaryData::ReadTmpEvt(std::ifstream& binfile) {
 
     while (myrsize > 0) {
         uint16_t msize = 0;
-        if (t_acq_mode & 0x03) // Spect Or Time
+        if (t_acq_mode & DTQ_TSPECT) // Spect Or Time
             msize = t_BinaryData::ReadSpectTime(binfile);
-        if (t_acq_mode == 4) // Count mode
+        if (t_acq_mode & DTQ_COUNT) // Count mode
             msize = t_BinaryData::ReadCnts(binfile);
-        if (t_acq_mode != 2) // Number of hits (Chs firing) read in Spect and Count mode, like in time mode (DNIN: is it useful?)
+        if ((t_acq_mode&0x0F) != DTQ_TIMING) // Number of hits (Chs firing) read in Spect and Count mode, like in time mode (DNIN: is it useful?)
             ++t_num_of_hit;
         myrsize -= msize;
     }
@@ -283,8 +315,9 @@ void t_BinaryData::WriteTmpEvt(std::ofstream& csvfile) {
 
     //std::string evt_header = std::to_string(t_brd) + "," + std::to_string(t_tstamp);
     std::string evt_header = std::to_string(t_tstamp);
+    if ((t_acq_mode & 0XF0) == DTQ_RTSTAMP) evt_header += "," + std::to_string(t_rel_tstamp);
     if (t_acq_mode != ACQMODE_TIMING) {
-        evt_header += "," + std::to_string(t_trigger_ID) + "," + std::to_string(t_brd) + ","; // +std::to_string(ch_mask);
+        evt_header += "," + std::to_string(t_trigger_ID) + "," + std::to_string(t_brd) + "," + std::to_string(t_num_of_hit) + ","; // +std::to_string(ch_mask);
         char tmp[50]; // print mask
         my_sprintf(tmp, "0x%" PRIx64, t_ch_mask);
         evt_header += tmp;
@@ -302,19 +335,27 @@ void t_BinaryData::WriteTmpEvt(std::ofstream& csvfile) {
             s_data = "," + std::to_string(t_ch_id.at(i)) + "," + tmp;
             if (t_data_type.at(i) & LG)
                 s_data += "," + std::to_string(t_PHA_LG.at(i));
+            else s_data += ",-1";
             if (t_data_type.at(i) & HG)
                 s_data += "," + std::to_string(t_PHA_HG.at(i));
-            if (t_data_type.at(i) & TOA) {
-                if (t_time_unit)
-                    s_data += "," + std::to_string(t_ToA_f.at(i));
-                else
-                    s_data += "," + std::to_string(time_factor * t_ToA_i.at(i));
-            }
-            if (t_data_type.at(i) & TOT) {
-                if (t_time_unit)
-                    s_data += "," + std::to_string(t_ToT_f.at(i));
-                else
-                    s_data += "," + std::to_string(time_factor * t_ToT_i.at(i));
+            else s_data += ",-1";
+            if (t_acq_mode & ACQMODE_TIMING) {
+                if (t_data_type.at(i) & TOA) {
+                    if (t_time_unit)
+                        s_data += "," + std::to_string(t_ToA_f.at(i));
+                    else if (time_factor == 1)
+                        s_data += "," + std::to_string(t_ToA_i.at(i));  // It is not correct to show a float when an integer is expected, despite the decimal part is 0
+                    else
+                        s_data += "," + std::to_string(time_factor * t_ToA_i.at(i));
+                } else s_data += ",-1";
+                if (t_data_type.at(i) & TOT) {
+                    if (t_time_unit)
+                        s_data += "," + std::to_string(t_ToT_f.at(i));
+                    else if (time_factor == 1)
+                        s_data += "," + std::to_string(t_ToT_i.at(i));
+                    else
+                        s_data += "," + std::to_string(time_factor * t_ToT_i.at(i));
+                } else s_data += ",-1";
             }
         }
         if (t_acq_mode == ACQMODE_COUNT)  // Count mode

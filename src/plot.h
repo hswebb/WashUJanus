@@ -21,6 +21,8 @@
 #include "FERSlib.h"
 #include "Statistics.h"
 
+#define MAX_NTRACES   8
+
 int OpenPlotter();
 int ClosePlotter();
 int PlotSpectrum();

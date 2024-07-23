@@ -27,9 +27,12 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <sstream>
 #include <chrono>
 #include <algorithm>
 #include <vector>
+#include <regex>
+#include <iterator>
 #include "BinaryDataFERS.h"
 
 #ifdef _WIN32
@@ -86,6 +89,7 @@ void usage() {
     std::cout << "\t --ns: force the ToA/ToT unit to 'ns'" << std::endl;
     std::cout << "\t --lfile: file containing a list of binary files to convert" << std::endl;
     std::cout << "\t --bfile: list of the binary files to convert. I.e.: --bfile Run1_list.dat Run2_list.dat Run2_list.dat ..." << std::endl;
+    std::cout << "\t to convert files of a run with subrun, list the first file of the run. I.e.: --bfile Run1.0_list.dat" << std::endl;
     std::cout << std::endl << std::endl;
     //std::cout << "If no filename are provided, you are asked to provide it manually."
 }
@@ -93,7 +97,7 @@ void usage() {
 /*************************************************************************************
 *                               MAIN
 **************************************************************************************/
-int main(int argc, char* argv[]) 
+int main(int argc, char* argv[])
 {
     std::string file_name;
     std::string csv_file_name;
@@ -105,6 +109,8 @@ int main(int argc, char* argv[])
 
     std::vector<std::string> filenames;
     std::vector<std::string> not_converted;
+
+    std::vector<std::vector<std::string>> subrun_filenames;
 
     //Check input parameters - getopt is a possible improvement
     for (int p = 1; p < argc; ++p) {
@@ -136,7 +142,7 @@ int main(int argc, char* argv[])
             }
         }
     }
- 
+
     if (res == -1)  // File list not found, since only 1 is provided the program stopd
         exit(-1);
     if (filenames.size() == 0 || argc <= 1) { // Print the help menu if no file is given
@@ -144,76 +150,210 @@ int main(int argc, char* argv[])
         exit(-1);
     }
 
+    //filenames.push_back("Run1.0_list.dat");
+
     // Define the binfile to convert and the csvfile
     std::ifstream to_convert;
     std::ofstream f_converted;
 
-    for (uint32_t i = 0; i < filenames.size(); ++i) {  
-        to_convert.open(filenames.at(i), std::ios::binary);
-        if (!to_convert.is_open()) {    // Skipping to the next file if any
-            std::cout << "File " << filenames.at(i) << " not found!\nMove to the next one ..." << std::endl; // std::flush;;
-            not_converted.push_back(filenames.at(i));
-            res |= -1;
-            continue;
-        }
-        else
-            std::cout << "Opening file " << filenames.at(i) << std::endl; // "\n" << std::flush;;
+    // Expand the vector of filenames in case of subrun
+    for (uint32_t i = 0; i < filenames.size(); ++i) {
 
-        csv_file_name = filenames.at(i).substr(0, filenames.at(i).find_last_of('.')) + ".csv";   // The converted file will be saved in the same folder of the binfile
-        f_converted.open(csv_file_name);
-        if (!f_converted.is_open()) {
-            std::cout << "File " << csv_file_name << " cannot be created!\nMove to the next one ...\n";
-            not_converted.push_back(filenames.at(i));
-            res = -1;
-            continue;
+        // Check if filename is a subRrun chain, use Regex
+        //std::regex fname_regex("^[A-Za-z0-9]+[0-9]+\\.[0-9]+\\_list.dat$", std::regex::icase);
+        std::regex fname_regex(R"(^(.*[\\\/])([^\\\/]+)(\d+\.\d+)_list\.dat$)", std::regex::icase);
+        std::smatch matches;
+        std::regex_search(filenames[i], matches, fname_regex);
+        if (matches.size() > 0 && matches[0].str() == filenames.at(i)) {
+            // Get Radix
+            std::istringstream iss(filenames.at(i));
+            std::vector<std::string> fname_token;
+            std::string token;
+            std::string new_fname = "";
+            while (std::getline(iss, token, '.')) {
+                fname_token.push_back(token);
+            }
+            if (!fname_token.empty()) {
+                // Create new string till the SubRun number
+                for (int j = 0; j < fname_token.size() - 2; ++j) {
+                    new_fname += new_fname + fname_token.at(j) + ".";
+                }
+            } else {
+                std::cout << "File " << filenames.at(i) << " cannot be tagged as part of subrun files.\n";
+                continue;
+            }
+            // Create the vector with filenames
+            int j = 0;
+            fname_token.clear();
+            while (1) {
+                std::string tmp_fname = new_fname + std::to_string(j) + "_list.dat";
+                std::ifstream tmpf(tmp_fname);
+                if (!tmpf.is_open())
+                    break;
+                else {
+                    tmpf.close();
+                    fname_token.push_back(tmp_fname);
+                }
+                ++j;
+            }
+            subrun_filenames.push_back(fname_token);
+        } else {
+            std::vector<std::string> tmpstr;
+            tmpstr.push_back(filenames.at(i));
+            subrun_filenames.push_back(tmpstr);
         }
+        //////////////////////////////////////////////////////////
+    }
 
-        // Class initialization. Should be destroyed? It is not a pointer, so no ... correct?
-        t_BinaryDataFERS mdata(to_convert, f_converted, force_ns);
+    // cicle over the vector of filenames vector
+    for (int i = 0; i < filenames.size(); ++i) {
+        // The initialization of mdata must be done here
+        // Class initialization. Should be destroyed? It is not a pointer, so no ... correct?  
+        t_BinaryDataFERS mdata(force_ns, 0);
         //BinaryData_5203 mdata(to_convert, f_converted, force_ns);
 
-        totsize = mdata.GetEventsSize();
-        read_size = mdata.GetEventsBegin();
-        uint64_t onepercent = (uint32_t)(totsize / 100.);
-        std::cout << "File Size: " << totsize << " Bytes\n";
+        for (int j = 0; j < subrun_filenames.at(i).size(); ++j) {
+            to_convert.open(subrun_filenames.at(i).at(j), std::ios::binary);
+            if (!to_convert.is_open()) {    // Skipping to the next file if any
+                std::cout << "File " << subrun_filenames.at(i).at(j) << " not found!\nMove to the next one ..." << std::endl; // std::flush;;
+                not_converted.push_back(subrun_filenames.at(i).at(j));
+                res = -1;
+                continue;
+            } else
+                std::cout << "Opening file " << subrun_filenames.at(i).at(j) << std::endl; // "\n" << std::flush;;
 
-        while (!to_convert.eof() && read_size < totsize) { // DNIN: is it possible to save each event in a queue or a vector
-            mdata.ReadTmpEvtFERS(to_convert);
-            mdata.WriteTmpEvtFERS(f_converted);
-
-            mb = to_convert.tellg();
-            read_size = mb - begin;
-            if ((uint32_t)read_size > next_p * onepercent) {
-                std::cout << "\r" << "---> Processing: " << read_size << "/" << totsize << "(" << 100 * (read_size) / totsize << "%)" << std::flush;    // DNIN: Why it does not flush with > 1 file?
-                ++next_p;
+            csv_file_name = subrun_filenames.at(i).at(j).substr(0, subrun_filenames.at(i).at(j).find_last_of('.')) + ".csv";   // The converted file will be saved in the same folder of the binfile
+            f_converted.open(csv_file_name);
+            if (!f_converted.is_open()) {
+                std::cout << "File " << csv_file_name << " cannot be created!\nMove to the next one ...\n";
+                not_converted.push_back(subrun_filenames.at(i).at(j));
+                res = -1;
+                continue;
             }
+
+            if (j == 0) {// The header is written only in the first file. Is it correct? 
+                mdata.InitAnalisys(to_convert, f_converted, force_ns);
+            } else {
+                mdata.ComputeBinfileSizeFERS(to_convert);
+            }
+
+            totsize = mdata.GetEventsSize();
+            read_size = mdata.GetEventsBegin(); // These two values are computed in ComputeBinfileSizeFERS
+            uint64_t onepercent = (uint64_t)(totsize / 100.);
+            std::cout << "File Size: " << totsize << " Bytes\n";
+
+            while (!to_convert.eof() && read_size < totsize) { // DNIN: is it possible to save each event in a queue or a vector
+                mdata.ReadTmpEvtFERS(to_convert);
+                mdata.WriteTmpEvtFERS(f_converted);
+
+                mb = to_convert.tellg();
+                read_size = mb - begin;
+                if ((uint32_t)read_size > next_p * onepercent) {
+                    std::cout << "\r" << "---> Processing: " << read_size << "/" << totsize << "(" << 100 * (read_size) / totsize << "%)" << std::flush;    // DNIN: Why it does not flush with > 1 file?
+                    ++next_p;
+                }
+            }
+
+            std::cout << "\r" << "---> Processing: " << totsize << "/" << totsize << " (" << 100 << "%)\n" << std::flush;
+            std::cout << "File " << filenames.at(i) << " converted to " << csv_file_name << " \n" << std::endl;
+
+            to_convert.close();
+            to_convert.clear();
+            f_converted.close();
+            f_converted.clear();
+            next_p = 1;
         }
-
-        std::cout << "\r" << "---> Processing: " << totsize << "/" << totsize << "(" << 100 << "%)\n" << std::flush;
-        std::cout << "File " << filenames.at(i) << " converted correctly to " << csv_file_name << " \n" << std::endl;
-
-        to_convert.close();
-        to_convert.clear();
-        f_converted.close();
-        f_converted.clear();
-        next_p = 1;
-
     }
-    
-
 
     if (res != 0) {
         std::cout << "File(s) not converted: \n";
         for (uint16_t i = 0; i < not_converted.size(); ++i)
             std::cout << not_converted.at(i) << "\n";
-    }
-    else
+    } else
         std::cout << "Conversion(s) finished!! Exiting ...\n";
-    
+
     Sleep(2000);
     return 0;
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+//        to_convert.open(filenames.at(i), std::ios::binary);
+//        if (!to_convert.is_open()) {    // Skipping to the next file if any
+//            std::cout << "File " << filenames.at(i) << " not found!\nMove to the next one ..." << std::endl; // std::flush;;
+//            not_converted.push_back(filenames.at(i));
+//            res = -1;
+//            continue;
+//        }
+//        else
+//            std::cout << "Opening file " << filenames.at(i) << std::endl; // "\n" << std::flush;;
+//
+//        csv_file_name = filenames.at(i).substr(0, filenames.at(i).find_last_of('.')) + ".csv";   // The converted file will be saved in the same folder of the binfile
+//        f_converted.open(csv_file_name);
+//        if (!f_converted.is_open()) {
+//            std::cout << "File " << csv_file_name << " cannot be created!\nMove to the next one ...\n";
+//            not_converted.push_back(filenames.at(i));
+//            res = -1;
+//            continue;
+//        }
+//
+//        // Class initialization. Should be destroyed? It is not a pointer, so no ... correct?
+//        t_BinaryDataFERS mdata(to_convert, f_converted, force_ns);
+//        //BinaryData_5203 mdata(to_convert, f_converted, force_ns);
+//
+//        totsize = mdata.GetEventsSize();
+//        read_size = mdata.GetEventsBegin();
+//        uint64_t onepercent = (uint64_t)(totsize / 100.);
+//        std::cout << "File Size: " << totsize << " Bytes\n";
+//
+//        while (!to_convert.eof() && read_size < totsize) { // DNIN: is it possible to save each event in a queue or a vector
+//            mdata.ReadTmpEvtFERS(to_convert);
+//            mdata.WriteTmpEvtFERS(f_converted);
+//
+//            mb = to_convert.tellg();
+//            read_size = mb - begin;
+//            if ((uint32_t)read_size > next_p * onepercent) {
+//                std::cout << "\r" << "---> Processing: " << read_size << "/" << totsize << "(" << 100 * (read_size) / totsize << "%)" << std::flush;    // DNIN: Why it does not flush with > 1 file?
+//                ++next_p;
+//            }
+//        }
+//
+//        std::cout << "\r" << "---> Processing: " << totsize << "/" << totsize << "(" << 100 << "%)\n" << std::flush;
+//        std::cout << "File " << filenames.at(i) << " converted correctly to " << csv_file_name << " \n" << std::endl;
+//
+//        to_convert.close();
+//        to_convert.clear();
+//        f_converted.close();
+//        f_converted.clear();
+//        next_p = 1;
+//
+//    }
+//    
+//
+//
+//    if (res != 0) {
+//        std::cout << "File(s) not converted: \n";
+//        for (uint16_t i = 0; i < not_converted.size(); ++i)
+//            std::cout << not_converted.at(i) << "\n";
+//    }
+//    else
+//        std::cout << "Conversion(s) finished!! Exiting ...\n";
+//    
+//    Sleep(2000);
+//    return 0;
+//
+//}
 
 
 // For Debug

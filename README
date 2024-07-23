@@ -22,20 +22,34 @@ A. SYSTEM REQUIREMENTS
 -----------------------
    
   - Microsoft Windows (>)10 or Linux
-  - python 3 (>3.8 suggested) with tkinter
-  - g++ <= 11 (linux)
-   
+ 
+  - On windows, python is needed for developing or debugging purpose. Requirements:
+	. python3 (>3.8)
+	. tkinter
+	. pillow (with tkinter supporting)
+
+  - On linux the needed packages can be installed through Janus_Install.bash 
+    for debian like and fedora/redhat linux distributions. Requirements:
+	. g++ (suggested version <= 11)
+	. gnuplot
+    . python 3 (>3.8) 
+	. tkinter
+	. pillow (with tkinter supporting)
+	
+	
 
 B. INSTALLATION
 ----------------
 
 Windows:
-	- run bin/JanusPy.pyw for GUI mode or bin/JanusC.exe for console mode
+	- run bin/JanusPy.exe for GUI mode or bin/JanusC.exe for console mode
 
 Linux:
 	- cd in Janus directory
-	- run sudo sh Janus_Install.sh and check if any required package is missing
+	- run sudo bash Janus_Install.bash and check if any required package is missing
+	  or install the packages manually if the linux distribution is not supported by the Janus Installer
 	- run bin/JanusPy.pyw for GUI mode or bin/JanusC for console mode
+
 
 C. SUPPORT   
 -----------

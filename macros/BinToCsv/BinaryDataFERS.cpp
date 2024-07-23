@@ -58,6 +58,16 @@ void t_BinaryDataFERS::InitFERS(uint8_t force_ns, uint8_t mode) {
     t_data_format = 0;
 }
 
+void t_BinaryDataFERS::InitAnalisys(std::ifstream& binfile, std::ofstream& csvfile, uint8_t force_ns) {
+    t_BinaryDataFERS::ComputeBinfileSizeFERS(binfile);
+    t_BinaryDataFERS::ReadHeaderBinfileFERS(binfile);
+    binfile.seekg(t_BinaryDataFERS::t_begin, std::ios::beg);
+    if (t_brd_ver == 5202)
+        t_data_5202 = t_BinaryData(binfile, csvfile, force_ns);
+    else if (t_brd_ver == 5203)
+        t_data_5203 = t_BinaryData_5203(binfile, csvfile, force_ns);
+}
+
 void t_BinaryDataFERS::ComputeBinfileSizeFERS(std::ifstream& binfile) {
     t_BinaryDataFERS::t_begin = binfile.tellg();    // Position of the reading pointer after the binfile Header
     binfile.seekg(0, std::ios::end);

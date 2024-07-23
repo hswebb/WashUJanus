@@ -5,6 +5,78 @@
 *************************************************************************************************************************
 
 -------------------------------------------------------------------------------------------------------------------------
+Release 3.6.0 - 14/05/24
+-------------------------------------------------------------------------------------------------------------------------
+- Added GUI executable bin/JanusPy.exe to be launched without python installed
+- Added check on HV bias setting
+- Added Janus installer for fedora/redhat distribution
+- Changed the Janus_Install extension, from .sh to .bash
+- Improved the verbosity of Janus_Install.bash
+- Bug fix in header of BinToCsv
+- Bug fix on CSV list file
+- Bug fix on output list file with a maximum size
+- Bug fix on number of warning/error messages shown
+- Bug fix on ServiceEvent decode, channel 0 counts were skipped
+- Bug fix on Brd Temperature
+- Bug fix on integral statistics
+- Bug fix on raw data reprocessing with different run number
+- Bug fix on GUI, placed back the button on RunCtrl tab
+- Bug fix on Timing Mode in getting the number of hits
+- Bug fix on offline raw data processing for tdl connection
+
+-------------------------------------------------------------------------------------------------------------------------
+Release 3.5.0 - 08/04/24
+-------------------------------------------------------------------------------------------------------------------------
+- Added support for new trigger logic options and output monostable settings
+- Added PCB temperature readout 
+- Added FW-SW compatibility check
+- Added Data Analysis level parameter
+- Added 2nd time stamp (optional) that can be reset by the Tref signal
+- Added CSV output list file option to Janus
+- Added Service Event Info output file (temperatures and HV info)
+- Added no-blocking warning/error pop-up during a run are shown on GUI
+- Added time and legend on Msg_log file
+- Added on GUI verbose message related to service event only
+- Improved Janus_Installer.sh messages
+- Modified pop-up warning: not shown during data acquisition
+- Modified output file format to manage 2nd time stamp (file version = 3.3)
+- Modified plot behaviour: is not shown during startup except if an offline run is selected
+- Updated BinToCsv for binary file version 3.3. Added column of "number of hits" in each event, for all the acq modes
+- Bug fix on plot legend and traces selection
+- Bug fix on pedestal subtraction 
+- Bug fix on boards status error handling
+- Bug fix on boards overtemperature handling
+- Bug fix on Raw Data offline processing
+
+-------------------------------------------------------------------------------------------------------------------------
+Release 3.4.0 - 06/02/24
+-------------------------------------------------------------------------------------------------------------------------
+- Added option OR_QUAD to Trigger Logic
+- Added parameter Tlogic_width to set the Trigger Logic output width (monostable; 0=linear)
+- Changed param name: "PairedCnt_CoincWin" to "ChTrg_Width". Now used also for trigger logic coincidence window
+
+-------------------------------------------------------------------------------------------------------------------------
+Release 3.3.0 - 12/12/23
+-------------------------------------------------------------------------------------------------------------------------
+- Improved plot legend readability
+- Improved errors handling, during run, while 
+- Removed MANUAL option in StopRunMode when Jobs are enabled
+- Verbose socket message option in GUIMode menu creates logs of FERSlib messages
+- Removed Makefile Log
+- Improved console Warning/Error messages readability
+- Added raw data saving by FERS_LL library
+- Added online/offline raw data saved reprocessing
+- Added limit size for list files
+- Added concentrator info in RunInfo file
+- Update BinToCsv to convert binfile with limited size to version 3.0
+- Bug fix on Verbose socket message
+- Bug fix on FW upgrade from GUI when FW is not found
+- Bug fix on plot legend label afer an hard reconfiguration
+- Bug fix in FERS FW upgrade via TDlink, available from FW Major Rev >= 6
+- Bug fix in board selection in Statistics tab
+- Bug fix in pedestal calibration function
+
+-------------------------------------------------------------------------------------------------------------------------
 Release 3.2.4 - 22/08/2023
 -------------------------------------------------------------------------------------------------------------------------
 - Bug fix on command delay setting for TDL connection

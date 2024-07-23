@@ -42,6 +42,9 @@ const int debug = 0;
 #define PLOT_TYPE_SCAN_THR		4
 #define PLOT_TYPE_SCAN_DELAY	5
 
+#define LEG_VSPACE	0.0226
+
+
 // --------------------------------------------------------------------------------
 // Open Gnuplot
 // --------------------------------------------------------------------------------
@@ -67,6 +70,8 @@ int OpenPlotter()
 // --------------------------------------------------------------------------------
 int ClosePlotter()
 {
+	LastPlotType = -1;
+	LastPlotName = -1;
 	if (plotpipe != NULL)
 #ifdef _WIN32
 		_pclose(plotpipe);
@@ -85,17 +90,17 @@ int PlotSpectrum()
 	if (debug) debbuff = fopen("gnuplot_debug_PHA.txt", "w");
 
 	int i, t, nt, xcalib, Nbin, max_yval=1;
-	int en[8], brd[8], ch[8]; // enable and Board/channel assigned to each trace
-	char SorBF[8];
-	int rn[8]; // run number for off line spectrum
-	char cmd[1000], pixel[3];
-	double mean[8], rms[8], A0[8], A1[8] = {}, la0=0, la1=0;
+	int en[MAX_NTRACES], brd[MAX_NTRACES], ch[MAX_NTRACES]; // enable and Board/channel assigned to each trace
+	char SorBF[MAX_NTRACES];
+	int rn[MAX_NTRACES]; // run number for off line spectrum
+	char cmd[10000], pixel[3];
+	double mean[MAX_NTRACES], rms[MAX_NTRACES], A0[MAX_NTRACES], A1[MAX_NTRACES] = {}, la0=0, la1=0;
 	char xunit[50];
 	char ffxunit[50], fftitle[50];
-	char description[8][50];
+	char description[MAX_NTRACES][50];
 	static int LastNbin = 0, LastXcalib = 0;
 	static double LastA0 = 0, LastA1 = 0;
-	Histogram1D_t *Histo[8];
+	Histogram1D_t *Histo[MAX_NTRACES];
 
 	if (plotpipe == NULL) return -1;
 
@@ -128,7 +133,7 @@ int PlotSpectrum()
 
 	nt = 0;
 	//char tmp_rn[8][100];
-	for(t=0; t<8; t++) {
+	for(t=0; t<MAX_NTRACES; t++) {
 		if (strlen(RunVars.PlotTraces[t]) == 0) {
 			en[t] = 0;
 		} else {
@@ -155,7 +160,7 @@ int PlotSpectrum()
 					rms[t] = sqrt((Histo[t]->rms / Histo[t]->H_cnt) - mean[t] * mean[t]);
 				}
 				//set description
-				sprintf(description[t], "T%d Run%d - Offline", t, rn[t]);
+				sprintf(description[t], "T%d Run%d", t, rn[t]); //- Offline
 			}
 			else if (tmp_rn[0] == 'S'){
 				Nbin = Stats.offline_bin;
@@ -176,7 +181,7 @@ int PlotSpectrum()
 					rms[t] = sqrt((Histo[t]->rms / Histo[t]->H_cnt) - mean[t] * mean[t]);
 				}
 				//set description
-				sprintf(description[t], "T%d File:%s - Offline", t, ext_file);
+				sprintf(description[t], "%s", ext_file); //- Offline
 
 			} else {	// online
 				if (brd[t] >= WDcfg.NumBrd) brd[t] = 0;
@@ -221,13 +226,13 @@ int PlotSpectrum()
 					rms[t] = sqrt((Histo[t]->rms / Histo[t]->H_cnt) - mean[t] * mean[t]); // DNIN: Statistically speaking, shouldn't be rms/(cnt-1)
 				}
 
-				sprintf(description[t], "T%d Run%d Online", t, RunVars.RunNumber);
+				sprintf(description[t], "T%d Run%d", t, RunVars.RunNumber); // Online
 			}
 		}
 	}
 	if (nt == 0) return 0;
 	// Take A0 and A1 of the first active channel.
-	for (int t = 0; t < 8; ++t) {
+	for (int t = 0; t < MAX_NTRACES; ++t) {
 		if (!en[t])
 			continue;
 		la0 = A0[t];
@@ -250,6 +255,11 @@ int PlotSpectrum()
 		fprintf(plotpipe, "unset logscale\n");
 		fprintf(plotpipe, "unset label\n");
 		fprintf(plotpipe, "set grid\n");
+		fprintf(plotpipe, "set key font 'courier new, 10'\n");
+		fprintf(plotpipe, "set label font 'courier new, 10'\n");
+
+		fprintf(plotpipe, "set key title ' Mean    RMS                '\n");
+
 		if (xcalib && WDcfg.AcquisitionMode != ACQMODE_COUNT) {
 			fprintf(plotpipe, "set xlabel '%s'\n", xunit);
 			fprintf(plotpipe, "set xrange [%f:%f]\n", la0, la0 + Nbin * la1);
@@ -274,9 +284,10 @@ int PlotSpectrum()
 	if (debug) 	fprintf(debbuff, "$PlotData << EOD\n");
 	fprintf(plotpipe, "$PlotData << EOD\n");
 	for(i=0; i < Nbin; i++) {
-		for(t=0; t<8; t++)
+		for(t=0; t<MAX_NTRACES; t++)
 			if (en[t]) {
 				int ind = i;
+				if (i > (int)(Histo[t]->Nbin - 1)) continue; // Offline histograms can have lower number of bins
 				if (RunVars.PlotType == PLOT_MCS_TIME) {	// DNIN: For MCS it is needed to reorder the binning, since the plot is saved in circular buffer but it is visualized as linear one
 					if (Histo[t]->H_data[Nbin-2]>0)
 						ind = (i + Histo[t]->Bin_set) % (Histo[t]->Nbin - 1);
@@ -292,28 +303,47 @@ int PlotSpectrum()
 
 	sprintf(cmd, "plot ");
 	int nt_written = 0;
-	for(t=0; t<8; t++){
+	char smeas[200];
+	for(t=0; t<MAX_NTRACES; t++){
 		if (!en[t]) continue;
-		char title[200], tmpc[500];
+
+		char title[200], tmpc[9500];
 		double a0 = xcalib ? A0[t] : 0;
 		double a1 = xcalib ? A1[t] : 1;
 		double m = a0 + a1 * mean[t];
 		double r = a1 * rms[t];
 		sprintf(pixel, "%c%c", 'A' + ch2x(ch[t]), '1' + ch2y(ch[t]));
+		if (Histo[t]->H_cnt == 0)
+			sprintf(smeas, "    ---     ---");
+		else
+			sprintf(smeas, "%7.3f  %6.3f", m, r);
+
 		if (SorBF[t] == 'S') {
-			sprintf(title, "%s: Mean=%6.2f, Rms=% 6.2f", description[t], m, r);
-			sprintf(tmpc, " $PlotData u ($0*%lf+%lf):($%d) title '%s' noenhanced w step", a1, a0, nt_written + 1, title);
-		}
-		else {
-			sprintf(title, "Brd[%d] Ch[%d] (%s): Mean=%6.2f, Rms=% 6.2f - %s", brd[t], ch[t], pixel, m, r, description[t]);
-			//sprintf(title, "CH[%d][%d] (%s): Mean=%6.2f, Rms=% 6.2f - %s", brd[t], ch[t], pixel, m, r, description[t]);
-			sprintf(tmpc, " $PlotData u ($0*%lf+%lf):($%d) title '%s' w step", a1, a0, nt_written + 1, title);   // DNIN here check for ToA spectra
+			sprintf(title, "%s: %s - T%d File", description[t], smeas, t);
+			fprintf(plotpipe, "set label %d '%s' font 'courier new, 10' at graph 0.95,%f right textcolor rgb '#2B65EC' noenhanced\n", nt_written + 1, title, 0.96 - (nt_written * LEG_VSPACE));
+			sprintf(tmpc, " $PlotData u ($0*%lf+%lf):($%d) title ' ' noenhanced w step", a1, a0, nt_written + 1);
+		} else {
+			if (WDcfg.NumBrd > 1)
+				sprintf(title, "Brd[%d] Ch[%d] (%s): %s - %s", brd[t], ch[t], pixel, smeas, description[t]);
+			else
+				sprintf(title, "Ch[%d] (%s): %s - %s", ch[t], pixel, smeas, description[t]);
+
+			char leg_color[] = "#000000";  // Offline and Online histograms differ by legend color
+			if (SorBF[t] == 'F') sprintf(leg_color, "#2B65EC");
+			else sprintf(leg_color, "#000000");
+			fprintf(plotpipe, "set label %d '%s' font 'courier new, 10' at graph 0.95,%f right textcolor rgb '%s'\n", nt_written + 1, title, 0.958-(nt_written*LEG_VSPACE), leg_color);
+			if (debug) 	fprintf(debbuff, "set label %d '%s' font 'courier new, 10' at graph 0.95,%f right textcolor rgb '%s'\n", nt_written + 1, title, 0.958 - (nt_written * LEG_VSPACE), leg_color);
+			sprintf(tmpc, " $PlotData u ($0*%lf+%lf):($%d) title '                      ' w step", a1, a0, nt_written + 1);   // DNIN here check for ToA spectra  title '%s', title
 		}
 		strcat(cmd, tmpc);
 		++nt_written;
 		
 		if (nt_written < nt) strcat(cmd, ", ");
 		else strcat(cmd, "\n");
+	}
+	for (int p = nt_written+1; p < MAX_NTRACES+1; ++p) {
+		fprintf(plotpipe, "unset label %d\n", p);
+		if (debug) fprintf(debbuff, "unset label %d\n", p);
 	}
 	if (debug) fprintf(debbuff, "%s", cmd);
 	fprintf(plotpipe, "%s", cmd);
@@ -335,7 +365,7 @@ int PlotCntHisto()
 	brd = 0;
 	ch = 0;
 	// Take the first trace active or brd/ch 0 0
-	for (int m = 0; m < 8; m++) {
+	for (int m = 0; m < MAX_NTRACES; m++) {
 		if (strlen(RunVars.PlotTraces[m]) != 0) {
 			sscanf(RunVars.PlotTraces[m], "%d %d", &brd, &ch);
 			break;
@@ -445,7 +475,7 @@ int Plot2Dmap(int StatIntegral)
 	brd = 0;
 	ch = 0;
 	// take the first trace active or brd/ch 0 0
-	for (int m = 0; m < 8; m++) {
+	for (int m = 0; m < MAX_NTRACES; m++) {
 		if (strlen(RunVars.PlotTraces[m]) != 0) {
 			sscanf(RunVars.PlotTraces[m], "%d %d", &brd, &ch);
 			break;
@@ -525,10 +555,10 @@ int Plot2Dmap(int StatIntegral)
 // --------------------------------------------------------------------------------
 int PlotStaircase()
 {
-	char pixel[3], cmd[1000], tmp_rn[8][100], description[8][50];
+	char pixel[3], cmd[1000], tmp_rn[MAX_NTRACES][100], description[MAX_NTRACES][50];
 	char mytitle[100] = "";
 	int i, t, nt=0, nstep;
-	int en[8], brd[8], ch[8], rn[8];
+	int en[MAX_NTRACES], brd[MAX_NTRACES], ch[MAX_NTRACES], rn[MAX_NTRACES];
 	float ymax = 0;
 
 	FILE* deb = NULL;
@@ -554,7 +584,7 @@ int PlotStaircase()
 	if (RunVars.StaircaseCfg[SCPARAM_STEP] == 0) return 0;
 
 	int nstep_off = 0;
-	for(t=0; t<8; t++) {
+	for(t=0; t<MAX_NTRACES; t++) {
 		if (strlen(RunVars.PlotTraces[t]) == 0) {
 			en[t] = 0;
 		} else {
@@ -582,7 +612,7 @@ int PlotStaircase()
 	for (i = 0; i < nstepmax; i++) {
 		// fprintf(plotpipe, "%d ", RunVars.StaircaseCfg[SCPARAM_MIN] + i * RunVars.StaircaseCfg[SCPARAM_STEP]);
 		// fprintf(deb, "%d", RunVars.StaircaseCfg[SCPARAM_MIN] + i * RunVars.StaircaseCfg[SCPARAM_STEP]);
-		for (t = 0; t < 8; t++) {
+		for (t = 0; t < MAX_NTRACES; t++) {
 			if (!en[t]) continue;
 			if (tmp_rn[t][0] == 'B') {	// From saved file
 				if (i >= nstep) {
@@ -633,7 +663,7 @@ int PlotStaircase()
 	sprintf(cmd, "plot ");
 	int nt_written = 0;
 	//for(t=0; t<nt; t++) {
-	for (t = 0; t < 8; t++) {
+	for (t = 0; t < MAX_NTRACES; t++) {
 		if (!en[t]) continue;
 		sprintf(pixel, "%c%c", 'A' + ch2x(ch[t]), '1' + ch2y(ch[t]));
 		char tmpc[500];
