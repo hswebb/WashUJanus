@@ -28,6 +28,8 @@ import ctrl as ctrl
 import tabs as tabs
 import ctypes
 
+import server_for_fribdaq as frib
+
 
 
 if sys.platform.find('win') == 0:
@@ -111,6 +113,10 @@ class Open_GUI(Frame):
 
 		self.AddMenu()
 		self.bglabel.place_forget()
+
+		self.server = Thread(target=frib.ServerForFRIBDAQ, args=[self.Ctrl])
+		self.server.daemon = True
+		self.server.start()
 
 		# start thread for reading messages from the client and print to output window
 		# self.stop_thread = False
