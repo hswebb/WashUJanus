@@ -106,6 +106,10 @@ class CtrlPanel():
 		self.len_macro = IntVar()
 		self.len_macro.set(0)
 
+		self.guimode = StringVar()
+		self.guimode.set('b')
+		self.guimode.trace('w', lambda name, index, mode: self.SaveRunVars())
+
 		self.time_unit = IntVar()
 		self.time_unit.set(0)
 		self.list_of_bfile = IntVar()
@@ -140,7 +144,7 @@ class CtrlPanel():
 		self.bplug.place(relx=float(x0)/sh.Win_Ctrl_W, rely=float(y0)/sh.Win_H, relwidth=float(36)/sh.Win_Ctrl_W, relheight=float(36)/sh.Win_H) #  y=y0)  #  x = x0, y = y0)
 		tt.Tooltip(self.bplug, text='Connect GUI to JanusC and FERS boards', wraplength=200)
 		x0 += xw
-		self.bstart = Button(parent, image=self.img_start, command=lambda:comm.SendCmd('s'), relief = 'groove') # , height=30, width=30
+		self.bstart = Button(parent, image=self.img_start, command=self.SendStart, relief='groove') #  lambda:comm.SendCmd('s'), relief = 'groove') # , height=30, width=30
 		self.bstart.place(relx=float(x0)/sh.Win_Ctrl_W, rely=float(y0)/sh.Win_H, relwidth=float(36)/sh.Win_Ctrl_W, relheight=float(36)/sh.Win_H)  #  x = x0, y = y0)
 		tt.Tooltip(self.bstart, text='Start Run', wraplength=200)
 		x0 += xw
@@ -269,6 +273,15 @@ class CtrlPanel():
 		self.enable_runvarsave = True
 
 
+	def SendStart(self):
+		if self.RisedWarning.get() == 0:
+			self.statled.set_color("green")
+		elif self.RisedWarning.get() == 1:
+			self.statled.set_color("yellow")
+			
+		comm.SendCmd('s')
+
+
 	def Freeze(self):
 		if self.FreezeStat.get() == 1:
 			comm.SendCmd('f1')
@@ -323,6 +336,7 @@ class CtrlPanel():
 	def SaveRunVars(self):
 		if self.enable_runvarsave:
 			rf = open("RunVars.txt", "w")
+			rf.write("GuiMode		 " + self.guimode.get() + "\n")
 			rf.write("ActiveBrd      " + self.active_board.get() + "\n")  #str(0) + "\n")  # Where to get the Active brd from Ctrl?
 			rf.write("ActiveCh       " + str(self.active_channel.get()) + "\n")
 			rf.write("PlotType       " + str(self.plot_options.index(self.plot_type.get())) + "\n")
@@ -355,6 +369,7 @@ class CtrlPanel():
 				if len(p) >= 2:
 					#if p[0] == "ActiveBrd": self.active_channel.set(int(p[1]))
 					# if p[0] == "ActiveBrd" and int(p[1]) < sh.MaxBrd: self.Tbrd.set(int(p[1]))
+					if p[0] == "GuiMode": self.guimode.set(p[1])
 					if p[0] == "ActiveCh" and int(p[1]) < 64: self.active_channel.set(int(p[1]))
 					if p[0] == "PlotType" and int(p[1]) < len(self.plot_options): self.plot_type.set(self.plot_options[int(p[1])])
 					if p[0] == "SMonType" and int(p[1]) < len(self.smon_options): self.smon_type.set(self.smon_options[int(p[1])])
@@ -373,19 +388,15 @@ class CtrlPanel():
 			rf.close()
 			self.enable_runvarsave = True
 
-	def SetAcqStatus(self, status, msg):
+	def SetAcqStatus(self, status, msg, offline = False):
 		self.AcqStatus["state"] = NORMAL
 		self.AcqStatus.delete(1.0, END)
 		self.AcqStatus.insert(INSERT, msg)
 		self.bin2csv_button["state"] = NORMAL
-		if status <= 0: # disconnected or connection fail
+		if status == 0: # disconnected or connection fail
 			# self.HV_ON
-			if status < 0: 
-				self.statled.set_color("red") 
-				self.AcqStatus.config(fg='red')
-			else: 
-				self.statled.set_color("grey") 
-				self.AcqStatus.config(fg='black')
+			self.statled.set_color("grey") 
+			self.AcqStatus.config(fg='black')
 			self.prev_brd[0] = 0
 			self.runled.set_color("grey") 
 			self.staircase_button.config(state=DISABLED)
@@ -399,6 +410,9 @@ class CtrlPanel():
 			self.SaveAs_button.config(state=NORMAL)
 			self.SaveToRun_button.config(state=NORMAL)
 			self.RisedWarning.set(0)
+		elif status == sh.ACQSTATUS_ERROR:
+			self.statled.set_color("red") 
+			self.AcqStatus.config(fg='red')
 		elif status == sh.ACQSTATUS_SOCK_CONNECTED: 
 			self.statled.set_color("yellow") 
 			self.AcqStatus.config(fg='black')
@@ -413,7 +427,7 @@ class CtrlPanel():
 			self.AcqStatus.config(fg='black')
 			s1 = msg.split('#')
 			self.enable_runvarsave = False
-			self.RunNumber.set(s1[1].split()[0])
+			# self.RunNumber.set(s1[1].split()[0])
 			self.enable_runvarsave = True
 			if params['EnableJobs'].default == '1': self.bstart.config(image=self.img_startjob)
 			else: 
@@ -425,8 +439,8 @@ class CtrlPanel():
 			else: self.statled.set_color("yellow")
 			self.runled.set_color("grey") 
 			self.bstart.config(state=NORMAL)
-			self.holdscan_button.config(state=NORMAL)
-			self.staircase_button.config(state=NORMAL)
+			if not offline: self.holdscan_button.config(state=NORMAL)
+			if not offline: self.staircase_button.config(state=NORMAL)
 			self.bstop.config(state=DISABLED)
 			self.bpause.config(state=DISABLED)
 			self.bsingle.config(state=DISABLED)
@@ -634,7 +648,8 @@ class CtrlPanel():
 		if self.PlotMaskWinIsOpen: self.ClosePlotMaskWin()
 		self.Tbrd = IntVar()
 		self.Tbrd.set(0)
-		self.Tch = 0
+		self.Tch = IntVar()
+		self.Tch.set(0)
 		self.FromBrdFile = StringVar()
 		self.FromBrdFile.set("B")
 		self.RunFromFile = StringVar()
@@ -703,7 +718,7 @@ class CtrlPanel():
 		#### Set the Run# of the plot you want to visualize
 		self.SelRunFile.append(Label(self.PlotMaskWin, text="Run#", font=("Arial Bold", 11)))
 		# self.SelRunFile[0].place(x=x0+155, y=y0+1)
-		self.RunFromFile.trace("w", lambda name, index, mode: self.UpdateMask())
+		# self.RunFromFile.trace("w", lambda name, index, mode: self.UpdateMask())
 		self.SelRunFile.append(Spinbox(self.PlotMaskWin, textvariable=self.RunFromFile, from_=0, to=1000, command=self.UpdateMask, 
 			validate="key", validatecommand=vcmd2, font=("Arial Bold", 12), width=2))
 		# self.SelRunFile[1].place(x=x0+200, y=y0+1)
@@ -735,7 +750,7 @@ class CtrlPanel():
 				self.maskbutton.append(Radiobutton(self.PlotMaskWin, text=str(i), value = str(i), variable=self.PlotMaskVar, command=self.UpdateMask, indicatoron=0))  #  , height = 1, width=2
 				self.maskbutton[i].place(relx=0.063 + x*0.096, rely=float(y0+(y+1)*self.sp)/yw, relwidth=0.093, relheight=0.06)  #  x = x0+x*self.sp, y=y0+(y+1)*self.sp
 		if self.GetBrdCh():
-			self.PlotMaskVar.set(str(self.Tch))
+			self.PlotMaskVar.set(str(self.Tch.get()))
 
 		y0 = y0 + self.sp*9 + 20
 		Checkbutton(self.PlotMaskWin, variable = self.Xcalib, command = self.SaveRunVars, height = 1, width=1).place(relx=float(x0)/xw, rely=float(y0)/yw)  #   x = x0, y = y0)
@@ -753,11 +768,12 @@ class CtrlPanel():
 	def UpdateMask(self):
 		if self.no_update: return
 		sel = self.PlotTraceSelVar.get()
+		# self.PlotMaskVar.set(str(self.Tch.get()))
 		if self.FromBrdFile.get() == "S":
 			[self.EntryRunFile[i].place_forget() for i in range(8)]
 			[self.EntryRunFile[sel].place(relx=(17./270), rely=(130./420), relwidth=0.88, relheight=19/420)]   #  x=17, y=125+5)]
 		if self.PlotMaskVar.get() == "": 
-			self.PlotTraceSel[sel]=""
+			self.PlotTraceSel[sel] = ""
 			self.selbutton[sel].config(fg='black')
 			if self.FromBrdFile.get() == "S" and len(self.ExtRunFile[sel].get().split())>0: 
 				self.BrdFile = self.FromBrdFile.get() + self.ExtRunFile[sel].get()
@@ -770,53 +786,9 @@ class CtrlPanel():
 			elif self.FromBrdFile.get() == "B": self.BrdFile = self.FromBrdFile.get()
 			elif self.FromBrdFile.get() == "S": self.BrdFile = self.FromBrdFile.get() + self.ExtRunFile[sel].get()
 			self.PlotTraceSel[sel] = str(self.Tbrd.get()) + " " + self.PlotMaskVar.get() + " " + self.BrdFile	#B for Online FRun_Number for Offine
-			self.selbutton[sel].config(fg='red')		
+			self.selbutton[sel].config(fg='red')	#	str(self.Tch.get())
 		self.SaveRunVars()
 
-	def AssignOctet(self, octet):
-		if self.no_update: return
-		# Set Variable
-		if self.FromBrdFile.get() == "F": self.BrdFile = self.FromBrdFile.get() + self.RunFromFile.get() # str(self.RunFromFile.get())
-		elif self.FromBrdFile.get() == "B": self.BrdFile = self.FromBrdFile.get()
-		for t in range(8):
-			if self.EnablePixelMap.get() == 0:
-				ch = octet*8+t
-			else:
-				pixs = chr(ord('A') + t) + chr(ord('0') + 8 - octet)
-				ch = self.pixmap.index(pixs)
-				if ch < 0 or ch > 63: continue
-			if t==self.PlotTraceSelVar.get(): cc = ch	
-			self.PlotTraceSel[t] =  str(self.Tbrd.get()) + " " + str(ch) + " " + self.BrdFile
-			self.PlotMaskVar.set(str(ch))
-			self.selbutton[t].config(fg='red')
-		self.PlotMaskVar.set(str(cc))
-		self.SaveRunVars()
-
-	def ActiveTrace(self):
-		if self.no_update: return
-		if self.GetBrdCh():	self.PlotMaskVar.set(str(self.Tch))
-		else: self.PlotMaskVar.set("")
-
-	def DisableTrace(self):
-		if self.no_update: return
-		sel = self.PlotTraceSelVar.get()
-		self.PlotTraceSel[sel] = ""
-		self.PlotMaskVar.set("")
-		self.ExtRunFile[sel].set("")
-		self.selbutton[sel].config(fg='black')
-		self.SaveRunVars()
-		
-	def DisableAllTraces(self):
-		if self.no_update: return
-		self.no_update = True # Prevent Updating Mask while setting RunVars
-		for sel in range(8):
-			self.PlotTraceSel[sel] = ""
-			self.PlotMaskVar.set("")
-			self.FromBrdFile.set("B")
-			self.RunFromFile.set("1")
-			self.selbutton[sel].config(fg='black')
-		self.SaveRunVars()
-		self.no_update = False
 
 	def GetBrdCh(self):
 		ts = self.PlotTraceSel[self.PlotTraceSelVar.get()].split()
@@ -832,9 +804,9 @@ class CtrlPanel():
 			except: self.Tbrd.set(0)
 		else: self.Tbrd.set(0)
 		if len(ts[1]) > 0: 
-			try: self.Tch = int(ts[1])
-			except: self.Tch = 0
-		else: self.Tch = 0
+			try: self.Tch.set(int(ts[1]))
+			except: self.Tch.set(0)
+		else: self.Tch.set(0)
 		# if len(ts[2]) > 0:
 		# 	self.FromBrdFile.set(ts[2][0])
 		# 	self.EnableRunFile()
@@ -859,6 +831,51 @@ class CtrlPanel():
 			[self.SelRunFile[i].place_forget() for i in range(len(self.SelRunFile))]
 			[self.EntryRunFile[i].place_forget() for i in range(len(self.EntryRunFile))]
 		return True
+
+	def AssignOctet(self, octet):
+		if self.no_update: return
+		# Set Variable
+		if self.FromBrdFile.get() == "F": self.BrdFile = self.FromBrdFile.get() + self.RunFromFile.get() # str(self.RunFromFile.get())
+		elif self.FromBrdFile.get() == "B": self.BrdFile = self.FromBrdFile.get()
+		for t in range(8):
+			if self.EnablePixelMap.get() == 0:
+				ch = octet*8+t
+			else:
+				pixs = chr(ord('A') + t) + chr(ord('0') + 8 - octet)
+				ch = self.pixmap.index(pixs)
+				if ch < 0 or ch > 63: continue
+			if t==self.PlotTraceSelVar.get(): cc = ch	
+			self.PlotTraceSel[t] =  str(self.Tbrd.get()) + " " + str(ch) + " " + self.BrdFile
+			self.PlotMaskVar.set(str(ch))
+			self.selbutton[t].config(fg='red')
+		self.PlotMaskVar.set(str(cc))
+		self.SaveRunVars()
+
+	def ActiveTrace(self):
+		if self.no_update: return
+		if self.GetBrdCh():	self.PlotMaskVar.set(str(self.Tch.get()))
+		else: self.PlotMaskVar.set("")
+
+	def DisableTrace(self):
+		if self.no_update: return
+		sel = self.PlotTraceSelVar.get()
+		self.PlotTraceSel[sel] = ""
+		self.PlotMaskVar.set("")
+		self.ExtRunFile[sel].set("")
+		self.selbutton[sel].config(fg='black')
+		self.SaveRunVars()
+		
+	def DisableAllTraces(self):
+		if self.no_update: return
+		self.no_update = True # Prevent Updating Mask while setting RunVars
+		for sel in range(8):
+			self.PlotTraceSel[sel] = ""
+			self.PlotMaskVar.set("")
+			self.FromBrdFile.set("B")
+			self.RunFromFile.set("1")
+			self.selbutton[sel].config(fg='black')
+		self.SaveRunVars()
+		self.no_update = False
 
 	def PixelMap(self):
 		x0, y0 = self.xm, self.ym

@@ -30,8 +30,9 @@
 // Global Variables
 // ****************************************************
 FILE *of_raw_b = NULL, *of_raw_a = NULL;
-FILE *of_list_b = NULL, *of_list_a = NULL;
+FILE *of_list_b = NULL, *of_list_a = NULL, *of_list_c;
 FILE *of_sync = NULL;
+FILE* of_servInfo = NULL;
 uint8_t fnumFVer = 0;
 uint8_t snumFVer = 0;
 uint8_t type_file = 0x0; // XXXX XCTS
@@ -39,8 +40,10 @@ uint8_t datatype = 0x0;	// XXTA XCHL	C=Counting T=ToT A=ToA (timestamp) H=HG L=L
 uint8_t fnumSW = 0;
 uint8_t snumSW = 0;
 uint8_t tnumSW = 0;
-char dtq_mode_ch[5][15] = { " ", "Spectroscopy", "Timing", "Spect_Timing", "Counting" };
-
+char dtq_mode_ch[6][15] = { " ", "Spectroscopy", "Timing_CStart", "Spect_Timing", "Counting", "Timing_CStop"};
+static uint64_t bin_size = 0, ascii_size = 0, csv_size = 0;
+static int bin_srun = 0, ascii_srun = 0, csv_srun = 0;
+static int LocalRunNum = 0;
 /*
 CRingBuffer *m_RingBuffer;
 const size_t RING_BUFFER_SIZE(32*1024*1024);
@@ -51,21 +54,61 @@ bool m_writeToRingBuffer = false;
 // Local functions
 // ****************************************************
 static uint16_t rebin_energy(uint16_t energy) {
-	if (WDcfg.EHistoNbin == 8192) return energy;
+	if		(WDcfg.EHistoNbin == 8192) return energy;
 	else if (WDcfg.EHistoNbin == 4096) return (energy >> 1);
 	else if (WDcfg.EHistoNbin == 2048) return (energy >> 2);
 	else if (WDcfg.EHistoNbin == 1024) return (energy >> 3);
-	else if (WDcfg.EHistoNbin == 512) return (energy >> 4);
-	else if (WDcfg.EHistoNbin == 256) return (energy >> 5);
+	else if (WDcfg.EHistoNbin == 512)  return (energy >> 4);
+	else if (WDcfg.EHistoNbin == 256)  return (energy >> 5);
 	else return energy;
 }
 
-
-static void CreateOutFileName(char *radix, int RunNumber, int binary, char *filename) {
-	if (RunNumber >= 0) sprintf(filename, "%sRun%d_%s", WDcfg.DataFilePath, RunNumber, radix);
-	else sprintf(filename, "%s%s", WDcfg.DataFilePath, radix);
-	if (binary) strcat(filename, ".dat");
+// Type: 0=Binary, 1=CSV, 2=ascii/txt
+static void CreateOutFileName(char *radix, int RunNumber, int type, char *filename) {
+	if (RunNumber >= 0) {
+		if (strcmp(radix, "list") == 0 && WDcfg.EnableMaxFileSize)
+			sprintf(filename, "%sRun%d.%d_%s", WDcfg.DataFilePath, RunNumber, 0, radix);
+		else
+			sprintf(filename, "%sRun%d_%s", WDcfg.DataFilePath, RunNumber, radix);
+	} else sprintf(filename, "%s%s", WDcfg.DataFilePath, radix);
+	if (type == 0) strcat(filename, ".dat");
+	else if (type == 1) strcat(filename, ".csv");
 	else strcat(filename, ".txt");
+}
+
+// Type: 0=Binary, 1=CSV, 2=ASCII
+static void IncreaseListSubRun(int type) {
+	int srun;
+	char filename[500];
+
+	if (type == 0) {
+		fclose(of_list_b);
+		++bin_srun;
+		srun = bin_srun;
+		bin_size = 0;
+	} else if (type == 1) {
+		fclose(of_list_c);
+		++csv_srun;
+		srun = csv_srun;
+		csv_size = 0;
+	} else {
+		fclose(of_list_a);
+		++ascii_srun;
+		srun = ascii_srun;
+		ascii_size = 0;
+	}
+	if (LocalRunNum >= 0) sprintf(filename, "%sRun%d.%d_%s", WDcfg.DataFilePath, LocalRunNum, srun, "list");
+	else sprintf(filename, "%s%s", WDcfg.DataFilePath, "list");
+	if (type == 0) {
+		strcat(filename, ".dat");
+		of_list_b = fopen(filename, "wb");
+	} else if (type == 1) {
+		strcat(filename, ".csv");
+		of_list_c = fopen(filename, "w");
+	} else {
+		strcat(filename, ".txt");
+		of_list_a = fopen(filename, "w");
+	}
 }
 
 
@@ -75,26 +118,35 @@ static void CreateOutFileName(char *radix, int RunNumber, int binary, char *file
 int OpenOutputFiles(int RunNumber)
 {
 	char filename[500];
+	LocalRunNum = RunNumber;
 
-	if ((WDcfg.OutFileEnableMask & OUTFILE_RAW_DATA_BIN) && (of_raw_b == NULL)) {
-		CreateOutFileName("raw_data", RunNumber, 1, filename);
-		of_raw_b = fopen(filename, "wb");
-	}
-	if ((WDcfg.OutFileEnableMask & OUTFILE_RAW_DATA_ASCII) && (of_raw_a == NULL)) {
-		CreateOutFileName("raw_data", RunNumber, 0, filename);
-		of_raw_a = fopen(filename, "w");
-	}
+	//if ((WDcfg.OutFileEnableMask & OUTFILE_RAW_DATA_BIN) && (of_raw_b == NULL)) { 
+	//	CreateOutFileName("raw_data", RunNumber, 1, filename);
+	//	of_raw_b = fopen(filename, "wb");
+	//}
+	//if ((WDcfg.OutFileEnableMask & OUTFILE_RAW_DATA_ASCII) && (of_raw_a == NULL)) {
+	//	CreateOutFileName("raw_data", RunNumber, 0, filename);
+	//	of_raw_a = fopen(filename, "w");
+	//}
 	if ((WDcfg.OutFileEnableMask & OUTFILE_LIST_BIN) && (of_list_b == NULL)) {
-		CreateOutFileName("list", RunNumber, 1, filename);
+		CreateOutFileName("list", RunNumber, 0, filename);
 		of_list_b = fopen(filename, "wb");
 	}
 	if ((WDcfg.OutFileEnableMask & OUTFILE_LIST_ASCII) && (of_list_a == NULL)) {
-		CreateOutFileName("list", RunNumber, 0, filename);
+		CreateOutFileName("list", RunNumber, 2, filename);
 		of_list_a = fopen(filename, "w");
 	}
+	if ((WDcfg.OutFileEnableMask & OUTFILE_LIST_CSV) && (of_list_c == NULL)) {
+		CreateOutFileName("list", RunNumber, 1, filename);
+		of_list_c = fopen(filename, "w");
+	}
 	if ((WDcfg.OutFileEnableMask & OUTFILE_SYNC) && (of_sync == NULL)) {
-		CreateOutFileName("sync", RunNumber, 0, filename);
+		CreateOutFileName("sync", RunNumber, 2, filename);
 		of_sync = fopen(filename, "w");
+	}
+	if ((WDcfg.OutFileEnableMask & OUTFILE_SERVICE_INFO) && (of_servInfo == NULL)) {
+		CreateOutFileName("ServiceInfo", RunNumber, 2, filename);
+		of_servInfo = fopen(filename, "w");
 	}
 	if ((WDcfg.OutFileEnableMask & OUTFILE_RAW_DATA_RINGBUFFER)) {
 		RBH_setSourceID(WDcfg.SourceID);
@@ -113,12 +165,22 @@ int CloseOutputFiles()
 	if (of_raw_a != NULL) fclose(of_raw_a);
 	if (of_list_b != NULL) fclose(of_list_b);
 	if (of_list_a != NULL) fclose(of_list_a);
+	if (of_list_c != NULL) fclose(of_list_c);
 	if (of_sync != NULL) fclose(of_sync);
+	if (of_servInfo != NULL) fclose(of_servInfo);
 	of_raw_b = NULL;
 	of_raw_a = NULL;
+	of_list_c = NULL;
 	of_list_b = NULL;
 	of_list_a = NULL;
+	of_servInfo = NULL;
 	of_sync = NULL;
+	bin_size = 0;
+	bin_srun = 0;
+	ascii_size = 0;
+	ascii_srun = 0;
+	csv_size = 0;
+	csv_srun = 0;
 
 	if (m_writeToRingBuffer) {
 		RBH_emitStateChangeToRing(false, WDcfg.UseBarrier);
@@ -164,8 +226,8 @@ int WriteListfileHeader() {
 
 	int16_t rn = (int16_t)RunVars.RunNumber;
 	// Write headers, common for all the list files
-	type_file = WDcfg.AcquisitionMode & 0x0F;  // dtq & 0x0F;
-	if (of_list_b != NULL) {
+	type_file = WDcfg.AcquisitionMode & 0x0F | (WDcfg.Enable_2nd_tstamp<<7);  // dtq & 0x0F;
+	if (of_list_b != NULL) {   // Binary ASCII
 		float tmpLSB = float(TOA_LSB_ns);
 		uint16_t enbin = WDcfg.EHistoNbin;
 		//uint32_t tmask = WDcfg.ChEnableMask1[brd];	// see below
@@ -187,16 +249,24 @@ int WriteListfileHeader() {
 		fwrite(&tmpLSB, sizeof(tmpLSB), 1, of_list_b);	// Keep it as float for homogenity with A5203, the value of the LSB of which is not fixed
 		//fwrite(&tmask, sizeof(tmask), 1, of_list_b);	// uncomment if we want the Channel Mask
 		fwrite(&Stats.start_time, sizeof(Stats.start_time), 1, of_list_b);
+		bin_size += header_size;
 	}
-	if (of_list_a != NULL) {
-		char unit[10];
-		if (WDcfg.OutFileUnit) strcpy(unit, "ns");
-		else strcpy(unit, "LSB");
+	char unit[10];
+	if (WDcfg.OutFileUnit) strcpy(unit, "ns");
+	else strcpy(unit, "LSB");
+
+	char mytime[100];
+	//strcpy(mytime, ctime(&Stats.time_of_start));
+	strcpy(mytime, asctime(gmtime(&Stats.time_of_start)));
+	mytime[strlen(mytime) - 1] = 0;
+
+	if (of_list_a != NULL) {  //  ASCII header
+		int t_file = (WDcfg.AcquisitionMode&0xF0)? 5: type_file & 0x0F;
 		fprintf(of_list_a, "//************************************************\n");
 		fprintf(of_list_a, "// File Format Version %s\n", FILE_LIST_VER);
 		//fprintf(of_list_a, "// Janus _%" PRIu16 " Release % s\n", brdVer, SW_RELEASE_NUM);   // For next File Format
 		fprintf(of_list_a, "// Janus Release %s\n", SW_RELEASE_NUM);
-		fprintf(of_list_a, "// Acquisition Mode: %s\n", dtq_mode_ch[type_file]);
+		fprintf(of_list_a, "// Acquisition Mode: %s\n", dtq_mode_ch[t_file]);
 		fprintf(of_list_a, "// Energy Histogram Channels: %d\n", WDcfg.EHistoNbin);
 		fprintf(of_list_a, "// ToA/ToT LSB: %.1f ns\n", TOA_LSB_ns);
 		char mytime[100];
@@ -208,17 +278,71 @@ int WriteListfileHeader() {
 		fprintf(of_list_a, "//************************************************\n");
 
 		int dtqh = WDcfg.AcquisitionMode & 0x0F;
+		int en2ts = (WDcfg.Enable_2nd_tstamp & 1);
 		if (dtqh == DTQ_SPECT) {
-			fprintf(of_list_a, "       Tstamp_us        TrgID   Brd  Ch       LG       HG\n");
+			if (en2ts) fprintf(of_list_a, "Brd  Ch       LG       HG        Tstamp_us       Tstamp2_us        TrgID			NHits\n");
+			else fprintf(of_list_a, "Brd  Ch       LG       HG        Tstamp_us        TrgID		NHits\n");
 		} else if (dtqh == DTQ_TSPECT) {
-			if (WDcfg.EnableToT) fprintf(of_list_a, "       Tstamp_us        TrgID   Brd  Ch       LG       HG   ToA_%s   ToT_%s\n", unit, unit);
-			else fprintf(of_list_a, "       Tstamp_us        TrgID   Brd  Ch       LG       HG   ToA_%s\n", unit);
+			if (WDcfg.EnableToT) fprintf(of_list_a, "Brd  Ch       LG       HG  ToA_%-3s  ToT_%-3s", unit, unit);
+			else fprintf(of_list_a, "Brd  Ch       LG       HG  ToA_%-3s", unit);
+			if (en2ts) fprintf(of_list_a, "        Tstamp_us       Tstamp2_us        TrgID			NHits\n");
+			else fprintf(of_list_a, "        Tstamp_us        TrgID			NHits\n");
 		} else if (dtqh == DTQ_TIMING) {
-			if (WDcfg.EnableToT) fprintf(of_list_a, "       Tstamp_us        Brd  Ch   ToA_%s   ToT_%s\n", unit, unit);
-			else fprintf(of_list_a, "       Tstamp_us        Brd  Ch   ToA_%s\n", unit);
+			if (WDcfg.EnableToT) fprintf(of_list_a, "Brd  Ch  ToA_%-3s  ToT_%-3s", unit, unit);
+			else fprintf(of_list_a, "Brd  Ch  ToA_%-3s", unit);
+			fprintf(of_list_a, "        Tstamp_us		NHits\n");
 		} else if (dtqh == DTQ_COUNT) {
-			fprintf(of_list_a, "       Tstamp_us        TrgID   Brd  Ch          Cnt\n");
+			if (en2ts) fprintf(of_list_a, "Brd  Ch          Cnt       Tstamp_us       Tstamp2_us        TrgID		NHits\n");
+			else fprintf(of_list_a, "Brd  Ch          Cnt       Tstamp_us        TrgID		NHits\n");
 		}
+
+		ascii_size = ftell(of_list_a);
+	}
+	if (of_list_c != NULL) {  // CSV Header
+		// Write Header
+		int t_file = (WDcfg.AcquisitionMode & 0xF0) ? 5 : type_file & 0x0F;
+		fprintf(of_list_c, "//************************************************\n");
+		fprintf(of_list_c, "//Board:5202\n//File_Format_Version:%s\n//Janus_Release:%s\n", FILE_LIST_VER, SW_RELEASE_NUM);
+		fprintf(of_list_c, "//Acquisition_Mode:%s\n", dtq_mode_ch[t_file]);
+		if (type_file & ACQMODE_SPECT) // Spect or TSpect mode
+			fprintf(of_list_c, "//Energy_Histo_NBins:%d\n", WDcfg.EHistoNbin);
+		if ((type_file & ACQMODE_TIMING_CSTART) & 0xF) { // Timing or TSpect
+			fprintf(of_list_c, "//Time_LSB_Value_ns:0.5\n");
+			fprintf(of_list_c, "//Time_Unit:%s\n", unit);
+		}
+		fprintf(of_list_c, "//Run#:%d\n", rn);
+		fprintf(of_list_c, "//Start_Time_Epoch:%" PRId64 "\n", Stats.start_time);
+		fprintf(of_list_c, "//Start_Time_DateTime_UTC:%s\n", mytime);
+		fprintf(of_list_c, "//************************************************\n");
+		// Write parname header
+		fprintf(of_list_c, "TStamp_us,");
+		if ((type_file & 0x80) && ((type_file & 0xF) != ACQMODE_TIMING_CSTART)) fprintf(of_list_c, "Rel_TStamp_us,");
+		if (!(type_file & ACQMODE_TIMING_CSTART)) fprintf(of_list_c, "Trg_Id,");
+		fprintf(of_list_c, "Board_Id,Num_Hits,");
+		if ((type_file & ACQMODE_SPECT)) {
+			fprintf(of_list_c, "ChannelMask,Ch_Id,DataType,PHA_LG,PHA_HG");
+			if (type_file & ACQMODE_TIMING_CSTART) {
+				fprintf(of_list_c, ",ToA_%s", unit);
+				if (WDcfg.EnableToT) fprintf(of_list_c, ",ToT_%s", unit);
+			} 
+			fprintf(of_list_c, "\n");
+		}
+		if ((type_file & 0xF) == ACQMODE_TIMING_CSTART) {
+			fprintf(of_list_c, "Ch_Id,DataType,ToA_%s", unit);
+			if (WDcfg.EnableToT) fprintf(of_list_c, ",ToT_%s", unit);
+			fprintf(of_list_c, "\n");
+		}
+		if ((type_file & 0xF) == ACQMODE_COUNT) {
+			fprintf(of_list_c, "ChannelMask,Ch_Id,Counts\n");
+		}
+		csv_size = ftell(of_list_c);
+	}
+	if (of_servInfo != NULL) {
+		fprintf(of_servInfo, "TimeStamp\t");
+		for (int j = 0; j < WDcfg.NumBrd; ++j) {
+			fprintf(of_servInfo, "\tBrd\t\tBrdTemp\t\tDetTemp\t\tFPGATemp\tHVTemp\t\tVmon\t\tImon\tHVstatus");
+		}
+		fprintf(of_servInfo, "\n");
 	}
 	if (of_sync != NULL)
 		fprintf(of_sync, "Brd    Tstamp_us      TrgID \n");
@@ -250,6 +374,7 @@ int WriteListfileHeader() {
         RBH_addToBuffer(&Stats.start_time, sizeof(Stats.start_time), 1);
         RBH_writeToRing(true);
     }
+	return 0;
 }
 
 // ****************************************************
@@ -257,11 +382,19 @@ int WriteListfileHeader() {
 // ****************************************************
 int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq)
 {
+	if (bin_size > WDcfg.MaxOutFileSize && WDcfg.EnableMaxFileSize)
+		IncreaseListSubRun(0);
+	if (ascii_size > WDcfg.MaxOutFileSize && WDcfg.EnableMaxFileSize)
+		IncreaseListSubRun(2);
+	if (csv_size > WDcfg.MaxOutFileSize && WDcfg.EnableMaxFileSize)
+		IncreaseListSubRun(1);
+
 	// ----------------------------------------------------------------------------------
 	// SPECT/SPECT_TIMING MODE
 	// ----------------------------------------------------------------------------------
 	if (dtq & DTQ_SPECT) {
 		SpectEvent_t *ev = (SpectEvent_t *)generic_ev;
+		int num_of_hits=0, masked[FERSLIB_MAX_NCH] = { 0 };
 		int isTSpect = (dtq & 0x2) >> 1;
 
 		// Re-Binning
@@ -275,12 +408,18 @@ int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq)
 		uint8_t i, b8 = brd;
 
 		for (i = 0; i < MAX_NCH; ++i) {
+			masked[i] = 0;
 			tmp_enL[i] = rebin_energy(ev->energyLG[i]);
 			tmp_enH[i] = rebin_energy(ev->energyHG[i]);
+			if (((ev->chmask >> i) & 1) && (tmp_enL[i] >= 0 || tmp_enH[i] >= 0)) {
+				++num_of_hits;
+				masked[i] = 1;
+			}
 		}
 
-		if (of_list_b != NULL) {
+		if (of_list_b != NULL && (WDcfg.OutFileEnableMask && OUTFILE_LIST_BIN)) {
 			uint16_t size = sizeof(size) + sizeof(b8) + sizeof(ts) + sizeof(trgid) + sizeof(ev->chmask);
+			if (dtq & 0x80) size += sizeof(ev->rel_tstamp_us);
 			for (i = 0; i < MAX_NCH; i++) {	// DNIN: Is it somehow usefull keeping the condition temp_enL/H >= 0??
 				datatype = 0;
 				if ((ev->chmask >> i) & 1) size += (sizeof(i) + sizeof(datatype));
@@ -307,9 +446,11 @@ int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq)
 				}
 				data_t[i] = datatype;
 			}
+			bin_size += size;
 			fwrite(&size, sizeof(size), 1, of_list_b);
 			fwrite(&b8, sizeof(b8), 1, of_list_b);
 			fwrite(&ts, sizeof(ts), 1, of_list_b);
+			if (dtq & 0x80)	fwrite(&ev->rel_tstamp_us, sizeof(ev->rel_tstamp_us), 1, of_list_b);
 			fwrite(&trgid, sizeof(trgid), 1, of_list_b);
 			fwrite(&ev->chmask, sizeof(ev->chmask), 1, of_list_b);
 			for(i=0; i<MAX_NCH; i++) {
@@ -338,10 +479,7 @@ int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq)
 			int evg = 1;
 			for(i=0; i<MAX_NCH; i++) {
 				if ((ev->chmask >> i) & 1) {
-					if (evg) fprintf(of_list_a, "%16.3lf %12" PRIu64 " ", ts, trgid);
-					else fprintf(of_list_a, "                              ");
-					evg = 0;
-					fprintf(of_list_a, "   %02d  %02d ", brd, i);
+					fprintf(of_list_a, "%3d  %02d ", brd, i);
 					if (tmp_enL[i] >= 0 && ((WDcfg.GainSelect & GAIN_SEL_LOW) || WDcfg.GainSelect == GAIN_SEL_AUTO)) fprintf(of_list_a, "%8d ", tmp_enL[i]);
 					else fprintf(of_list_a, "       - "); 
 					if (tmp_enH[i] >= 0 && ((WDcfg.GainSelect & GAIN_SEL_HIGH) || WDcfg.GainSelect == GAIN_SEL_AUTO)) fprintf(of_list_a, "%8d ", tmp_enH[i]);
@@ -356,9 +494,47 @@ int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq)
 							else fprintf(of_list_a, "%8d ", ev->ToT[i]);
 						} else fprintf(of_list_a, "       - ");
 					}
+					if (evg) {
+						if (dtq & 0x80) fprintf(of_list_a, "%16.3lf %16.3f %12" PRIu64 "\t\t%d", ts, ev->rel_tstamp_us, trgid, num_of_hits);
+						else fprintf(of_list_a, "%16.3lf %12" PRIu64 "\t\t%d", ts, trgid, num_of_hits);
+					}
+					evg = 0;
 					fprintf(of_list_a, "\n");
 				}
+				fflush(of_list_a);
 			}
+			ascii_size = ftell(of_list_a);
+		}
+		if (of_list_c != NULL) {
+			for (int j = 0; j < MAX_NCH; ++j) {
+				if (!masked[j]) continue;
+				datatype = 0;
+				if (tmp_enL[i] >= 0 && ((WDcfg.GainSelect & GAIN_SEL_LOW) || WDcfg.GainSelect == GAIN_SEL_AUTO)) datatype = datatype | 0x01;
+				if (tmp_enH[i] >= 0 && ((WDcfg.GainSelect & GAIN_SEL_HIGH) || WDcfg.GainSelect == GAIN_SEL_AUTO)) datatype = datatype | 0x02;
+				if (isTSpect) {
+					if (ev->tstamp[i] > 0) datatype = datatype | 0x10;
+					if (WDcfg.EnableToT && (ev->ToT[i] > 0)) datatype = datatype | 0x20;
+				}
+				fprintf(of_list_c, "%lf,", ts);
+				if (dtq & 0x80) fprintf(of_list_c, "%lf,", ev->rel_tstamp_us);
+				fprintf(of_list_c, "%" PRIu64 ",%d,%d,0x%" PRIx64 ",%d,0x%" PRIx8 ",", trgid, brd, num_of_hits, ev->chmask, j, datatype);
+				if (datatype & 0x1) fprintf(of_list_c, "%" PRIu16, tmp_enL[j]);
+				else fprintf(of_list_c, "-1");
+				if (datatype & 0x2) fprintf(of_list_c, ",%" PRIu16, tmp_enH[j]);
+				else fprintf(of_list_c, ",-1");
+				if (isTSpect) {
+					if (datatype & 0x10) {
+						if (WDcfg.OutFileUnit) fprintf(of_list_c, ",%f", 0.5*ev->tstamp[j]);
+						else fprintf(of_list_c, ",%" PRIu32, ev->tstamp[j]);
+					} else fprintf(of_list_c, ",-1");
+					if (datatype & 0x20) {
+						if (WDcfg.OutFileUnit) fprintf(of_list_c, ",%f", 0.5 * ev->ToT[j]);
+						else fprintf(of_list_c, ",%" PRIu16, ev->ToT[j]);
+					} else fprintf(of_list_c, ",-1");
+				}
+				fprintf(of_list_c, "\n");
+			}
+			csv_size = ftell(of_list_c);
 		}
 		// Genie - Copy of statements for of_list_b
 		if (m_writeToRingBuffer) {
@@ -392,6 +568,7 @@ int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq)
 			RBH_addToBuffer(&size, sizeof(size), 1);
 			RBH_addToBuffer(&b8, sizeof(b8), 1);
 			RBH_addToBuffer(&ts, sizeof(ts), 1);
+			if (dtq & 0x80)	RBH_addToBuffer(&ev->rel_tstamp_us, sizeof(ev->rel_tstamp_us), 1);
 			RBH_addToBuffer(&trgid, sizeof(trgid), 1);
 			RBH_addToBuffer(&ev->chmask, sizeof(ev->chmask), 1);
 			for(i=0; i<MAX_NCH; i++) {
@@ -422,27 +599,44 @@ int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq)
 	// ----------------------------------------------------------------------------------
 	// COUNTING MODE
 	// ----------------------------------------------------------------------------------
-	else if (dtq == DTQ_COUNT) {
+	else if ((dtq & 0x0F) == DTQ_COUNT) {
 		CountingEvent_t *ev = (CountingEvent_t *)generic_ev;
-
+		uint8_t i, b8 = brd;
+		
 		datatype = 0x0;
+		int num_of_hits = 0;
+		int masked[MAX_NCH] = { 0 };
 
 		uint64_t mask_chip1 = WDcfg.ChEnableMask1[brd];
 		ev->chmask = mask_chip1 << 32 | WDcfg.ChEnableMask0[brd];
+		
+		for (i = 0; i < MAX_NCH; ++i) {
+			if ((ev->chmask >> i) & 1) {
+				if (WDcfg.SupprZeroCntListFile == 1 && ev->counts[i] == 0)
+					continue;
+				else {
+					++num_of_hits;
+					masked[i] = 1;
+				}
+			}
+		}
 
-		uint8_t i, b8 = brd;
 		if (of_list_b != NULL) {
 			uint16_t size = sizeof(size) + sizeof(b8) + sizeof(ts) + sizeof(trgid) + sizeof(ev->chmask);
-			for(i=0; i<MAX_NCH; i++) 
+			if (dtq & 0x80) size += sizeof(ev->rel_tstamp_us);
+			for (i = 0; i < MAX_NCH; i++) {
 				if ((ev->chmask >> i) & 1) {
 					if (WDcfg.SupprZeroCntListFile == 1 && ev->counts[i] == 0)
 						continue;
 					else
 						size += (sizeof(i) + sizeof(ev->counts[i]));
 				}
+			}
+			bin_size += size;
 			fwrite(&size, sizeof(size), 1, of_list_b);
 			fwrite(&b8, sizeof(b8), 1, of_list_b);
 			fwrite(&ts, sizeof(ts), 1, of_list_b);
+			if (dtq & 0x80)	fwrite(&ev->rel_tstamp_us, sizeof(ev->rel_tstamp_us), 1, of_list_b);
 			fwrite(&trgid, sizeof(trgid), 1, of_list_b);
 			fwrite(&ev->chmask, sizeof(ev->chmask), 1, of_list_b);
 			for(i=0; i<MAX_NCH; i++) {
@@ -460,27 +654,36 @@ int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq)
 			int evg = 1, cnt_zero = 0;
 			for(i=0; i<MAX_NCH; i++) {
 				if ((ev->chmask >> i) & 1) {
-					if (evg) {
-						fprintf(of_list_a, "%16.3lf %12" PRIu64 " ", ts, trgid);
-					}
 					if (WDcfg.SupprZeroCntListFile == 1) {
 						if (ev->counts[i] > 0) {
 							if (evg == 0 && cnt_zero != 0) fprintf(of_list_a, "                              ");
 							cnt_zero++;
-							fprintf(of_list_a, "   %02d  %02d %12d\n", brd, i, ev->counts[i]);
+							fprintf(of_list_a, "%3d  %02d %12d", brd, i, ev->counts[i]);
 						}
 						if ((cnt_zero == 0) && (i == MAX_NCH - 1)) {
-							fprintf(of_list_a, "   %02d  --          --\n", brd);
+							fprintf(of_list_a, "%03d  --          --", brd);
 						}
 					} else {
-						if(evg == 0) 
-							fprintf(of_list_a, "                              ");
-						fprintf(of_list_a, "   %02d  %02d %12d\n", brd, i, ev->counts[i]);
+						fprintf(of_list_a, "%3d  %02d %12d", brd, i, ev->counts[i]);
 					}
-
+					if (evg) {
+						if (dtq & 0x80) fprintf(of_list_a, "%16.3lf %16.3f %12" PRIu64 "\t\t%d", ts, ev->rel_tstamp_us, trgid, num_of_hits);
+						else fprintf(of_list_a, "%16.3lf %12" PRIu64 "\t\t%d", ts, trgid, num_of_hits);
+					}
 					evg = 0;
+					fprintf(of_list_a, "\n");
 				}
 			}
+			ascii_size = ftell(of_list_a);
+		}
+		if (of_list_c != NULL) {
+			for (i = 0; i < MAX_NCH; ++i) {
+				if (!masked[i]) continue;
+				fprintf(of_list_c, "%lf,", ts);
+				if (dtq & 0x80) fprintf(of_list_c, "%lf,", ev->rel_tstamp_us);
+				fprintf(of_list_c, "%" PRIu64 ",%d,%d,0x%" PRIx64 ",%d,%" PRIu32"\n", trgid, brd, num_of_hits, ev->chmask, i, ev->counts[i]);
+			}
+			csv_size = ftell(of_list_c);
 		}
 		// Genie - Copy of statements for of_list_b
 		if (m_writeToRingBuffer) {
@@ -495,6 +698,7 @@ int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq)
 			RBH_addToBuffer(&size, sizeof(size), 1);
 			RBH_addToBuffer(&b8, sizeof(b8), 1);
 			RBH_addToBuffer(&ts, sizeof(ts), 1);
+			if (dtq & 0x80)	RBH_addToBuffer(&ev->rel_tstamp_us, sizeof(ev->rel_tstamp_us), 1);
 			RBH_addToBuffer(&trgid, sizeof(trgid), 1);
 			RBH_addToBuffer(&ev->chmask, sizeof(ev->chmask), 1);
 			for(i=0; i<MAX_NCH; i++) {
@@ -521,7 +725,7 @@ int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq)
 		uint32_t i;
 		uint8_t b8 = brd;
 		
-		if (of_list_b != NULL) {
+		if (of_list_b != NULL && (WDcfg.OutFileEnableMask && OUTFILE_LIST_BIN)) {
 			uint8_t* mydtype = NULL;
 			mydtype = (uint8_t*)malloc(ev->nhits * sizeof(uint8_t));
 			uint16_t size = sizeof(size) + sizeof(b8) + sizeof(ts) + sizeof(ev->nhits); // +sizeof(trgid); //trgid = 0 in timing mode
@@ -543,6 +747,7 @@ int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq)
 				mydtype[chit] = datatype;
 			}
 
+			bin_size += size;
 			fwrite(&size, sizeof(size), 1, of_list_b);
 			fwrite(&b8, sizeof(b8), 1, of_list_b);
 			fwrite(&ts, sizeof(ts), 1, of_list_b);
@@ -571,10 +776,7 @@ int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq)
 		if (of_list_a != NULL) {
 			int evg = 1;
 			for(i=0; i<ev->nhits; i++) {
-				if (evg) fprintf(of_list_a, "%16.3lf" PRIu64 " ", ts);  //fprintf(of_list_a, "%16.3lf %12" PRIu64 " ", ts, trgid);
-				else fprintf(of_list_a, "                              ");
-				evg = 0;
-				fprintf(of_list_a, "   %02d  %02d ", brd, ev->channel[i]);
+				fprintf(of_list_a, "%3d  %02d ", brd, ev->channel[i]);
 				if (ev->tstamp[i] > 0) {
 					if (WDcfg.AcquisitionMode == ACQMODE_TIMING_CSTART) {
 						if (WDcfg.OutFileUnit) fprintf(of_list_a, "%8.1f ", 0.5 * ev->tstamp[i]);
@@ -590,11 +792,35 @@ int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq)
 					else fprintf(of_list_a, "%8d ", ev->ToT[i]);
 				}
 				else fprintf(of_list_a, "       - ");
-
+				if (evg) fprintf(of_list_a, "%16.3lf\t\t%" PRIu16, ts, ev->nhits);  
+				evg = 0;
 				fprintf(of_list_a, "\n");
 			}
+			ascii_size = ftell(of_list_a);
 		}
-
+		if (of_list_c != NULL) {
+			for (int chit = 0; chit < ev->nhits; ++chit) {
+				datatype = 0x0;
+				if (ev->tstamp[chit] > 0)					datatype = datatype | 0x10;
+				if (ev->ToT[chit] > 0 && WDcfg.EnableToT)	datatype = datatype | 0x20;
+				fprintf(of_list_c, "%lf,%d,%" PRIu16 ",%" PRIu32 ",0x%" PRIx8 ",", ts, brd, ev->nhits, ev->channel[chit], datatype);
+				if (datatype == 0x10) {
+					if (WDcfg.AcquisitionMode == ACQMODE_TIMING_CSTART) {
+						if (WDcfg.OutFileUnit) fprintf(of_list_c, "%f", 0.5 * ev->tstamp[chit]);
+						else fprintf(of_list_c, "%" PRIu32, ev->tstamp[chit]);
+					} else if (WDcfg.AcquisitionMode == ACQMODE_TIMING_CSTOP) {
+						if (WDcfg.OutFileUnit) fprintf(of_list_c, "%f", (WDcfg.TrefWindow - 0.5 * ev->tstamp[chit]));
+						else fprintf(of_list_c, "%" PRIu32, (uint32_t)(WDcfg.TrefWindow / (float)CLK_PERIOD) - ev->tstamp[chit]);
+					}
+				} else fprintf(of_list_c, "-1");
+				if (datatype == 0x20) {
+					if (WDcfg.OutFileUnit) fprintf(of_list_c, ",%f", 0.5 * ev->ToT[chit]);
+					else fprintf(of_list_c, ",%" PRIu16, ev->ToT[chit]);
+				} else fprintf(of_list_c, ",-1");
+				fprintf(of_list_c, "\n");
+			}
+			csv_size = ftell(of_list_c);
+		}
 		// Genie - Copy of statements for of_list_b
 		if (m_writeToRingBuffer) {
 			uint8_t* mydtype = NULL;
@@ -648,6 +874,22 @@ int SaveList(int brd, double ts, uint64_t trgid, void *generic_ev, int dtq)
 	if (of_sync != NULL) { 
 		fprintf(of_sync, "%3d %12.3lf %10" PRIu64 "\n", brd, ts, trgid);
 	}
+	return 0;
+}
+
+
+// ****************************************************
+// Save Run Temp HV list
+// ****************************************************
+int WriteTempHV(ServEvent_t sev[FERSLIB_MAX_NBRD]) {
+	if (of_servInfo == NULL) return 0;
+	fprintf(of_servInfo, "[%" PRIu64 "]", sev[0].update_time);
+	for (int i = 0; i < WDcfg.NumBrd; ++i) {
+		int hv_status = sev[i].hv_status_on | sev[i].hv_status_ovc << 1 | sev[i].hv_status_ovv << 1;
+		fprintf(of_servInfo, "\t%d\t\t%2.2f\t\t\t%2.2f\t\t%2.2f\t\t%2.2f\t\t%3.2f\t\t%3.2f\t\t%d",i, 
+			sev[i].tempBoard, sev[i].tempDetector, sev[i].tempFPGA, sev[i].tempHV, sev[i].hv_Vmon, sev[i].hv_Imon, hv_status);
+	}
+	fprintf(of_servInfo, "\n");
 	return 0;
 }
 
@@ -737,10 +979,18 @@ int SaveHistos()
 /******************************************************
 * Save Run Info
 ******************************************************/
+int cnc_write(char* path, char cncp[MAX_NCNC][200]) 
+{
+	for (int i = 0; i < FERSLIB_MAX_NCNC; i++)
+		if (strcmp(cncp[i], path) == 0) return 1;
+	return 0;
+}
+
 int SaveRunInfo()
 {
 	char str[200];
 	char fname[500];
+	char read_cnc[MAX_NCNC][200];
 	struct tm* t;
 	time_t tt;
 	int b;
@@ -771,7 +1021,37 @@ int SaveRunInfo()
 	fprintf(iof, "Software Version: Janus %s\n", SW_RELEASE_NUM);
 	fprintf(iof, "Output data format version: %s\n", FILE_LIST_VER);
 	FERS_BoardInfo_t BoardInfo;
+	FERS_CncInfo_t CncInfo;
+	int cnc = 0;
+
 	for (b = 0; b < WDcfg.NumBrd; b++) {
+		char* cc, cpath[100];
+		if (((cc = strstr(WDcfg.ConnPath[b], "tdl")) != NULL)) {  // TDlink used => Open connection to concentrator (this is not mandatory, it is done for reading information about the concentrator)
+			FERS_Get_CncPath(WDcfg.ConnPath[b], cpath);
+			if (!cnc_write(cpath, read_cnc)) {
+				rr = FERS_ReadConcentratorInfo(cnc_handle[cnc], &CncInfo);
+				sprintf(read_cnc[cnc], "%s", cpath);
+				if (rr == 0) {
+					fprintf(iof, "Concentrator %d:\n", cnc);
+					fprintf(iof, "\tFPGA FW revision = %s\n", CncInfo.FPGA_FWrev);
+					fprintf(iof, "\tSW revision = %s\n", CncInfo.SW_rev);
+					fprintf(iof, "\tPID = %d\n\n", CncInfo.pid);
+					if (CncInfo.ChainInfo[0].BoardCount == 0) { 	// Rising error if no board is connected to link 0
+						Con_printf("LCSm", "ERROR: read concentrator info failed in SaveRunInfo\n");
+						return -2;
+					}
+					for (int l = 0; l < 8; l++) {
+						if (CncInfo.ChainInfo[l].BoardCount > 0)
+							Con_printf("LCSm", "Found %d board(s) connected to TDlink n. %d\n", CncInfo.ChainInfo[l].BoardCount, l);
+					}
+				} else {
+					Con_printf("LCSm", "ERROR: Cannot read concentrator %02d info\n", cnc);
+					return -2;
+				}
+				++cnc;
+			}
+		}
+
 		rr = FERS_ReadBoardInfo(handle[b], &BoardInfo); // Read Board Info
 		if (rr != 0)
 			return -1;
@@ -779,11 +1059,11 @@ int SaveRunInfo()
 		//if (FPGArev == 0) sprintf(fver, "BootLoader"); DNIN: mixed with an old version checker with register.
 		//else
 		sprintf(fver, "%d.%d (Build = %04X)", (BoardInfo.FPGA_FWrev >> 8) & 0xFF, (BoardInfo.FPGA_FWrev) & 0xFF, (BoardInfo.FPGA_FWrev >> 16) & 0xFFFF);
-		fprintf(iof, "Board %d:", b);
+		fprintf(iof, "Board %d:\n", b);
 		fprintf(iof, "\tModel = %s\n", BoardInfo.ModelName);
-		fprintf(iof, "\t\tPID = %" PRIu32 "\n", BoardInfo.pid);
-		fprintf(iof, "\t\tFPGA FW revision = %s\n", fver);
-		fprintf(iof, "\t\tuC FW revision = %08X\n", BoardInfo.uC_FWrev);
+		fprintf(iof, "\tPID = %" PRIu32 "\n", BoardInfo.pid);
+		fprintf(iof, "\tFPGA FW revision = %s\n", fver);
+		fprintf(iof, "\tuC FW revision = %08X\n", BoardInfo.uC_FWrev);
 	}
 	// CTIN: save event statistics
 	/*

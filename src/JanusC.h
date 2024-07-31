@@ -56,9 +56,9 @@
 	#endif
 #endif
 
-#define SW_RELEASE_NUM			"3.2.4"
-#define SW_RELEASE_DATE			"22/08/2023"
-#define FILE_LIST_VER			"3.2"
+#define SW_RELEASE_NUM			"3.6.0"
+#define SW_RELEASE_DATE			"14/05/2024"
+#define FILE_LIST_VER			"3.3"
 
 #ifdef _WIN32
 #define CONFIG_FILENAME			"Janus_Config.txt"
@@ -82,10 +82,10 @@
 // *****************************************************************
 // Parameter options
 // *****************************************************************
-#define OUTFILE_RAW_DATA_BIN			0x0001
-#define OUTFILE_RAW_DATA_ASCII			0x0002
-#define OUTFILE_LIST_BIN				0x0004
-#define OUTFILE_LIST_ASCII				0x0008
+#define OUTFILE_RAW_LL					0x0001
+#define OUTFILE_LIST_BIN				0x0002
+#define OUTFILE_LIST_ASCII				0x0004
+#define OUTFILE_LIST_CSV				0x0008
 #define OUTFILE_SPECT_HISTO				0x0010
 #define OUTFILE_ToA_HISTO				0x0020
 #define OUTFILE_TOT_HISTO				0x0040
@@ -93,6 +93,7 @@
 #define OUTFILE_RUN_INFO				0x0100
 #define OUTFILE_MCS_HISTO				0x0200
 #define OUTFILE_SYNC					0x0400
+#define OUTFILE_SERVICE_INFO			0x0800
 #define OUTFILE_RAW_DATA_RINGBUFFER		0x8000 // Genie: In case Caen adds something after the last one
 
 #define PLOT_E_SPEC_LG					0
@@ -107,6 +108,11 @@
 #define PLOT_SCAN_THR					9
 #define PLOT_SCAN_HOLD_DELAY			10
 #define PLOT_MCS_TIME					11	// DNIN those value have to be sorted later
+
+#define DATA_ANALYSIS_CNT				0x0001
+#define DATA_ANALYSIS_MEAS				0x0002
+#define DATA_ANALYSIS_HISTO				0x0004
+#define DATA_MONITOR					0x0008
 
 #define SMON_CHTRG_RATE					0
 #define SMON_CHTRG_CNT					1
@@ -140,6 +146,10 @@
 #define HDSPARAM_MAX					1
 #define HDSPARAM_STEP					2
 #define HDSPARAM_NMEAN					3
+
+// Temperatures
+#define TEMP_BOARD						0
+#define TEMP_FPGA						1
 
 
 // Acquisition Status Bits
@@ -177,6 +187,9 @@ typedef struct Config_t {
 	char RunTitle[81];              // Run title for RingStateChangeItem (FRIB)
 	bool UseBarrier;                // Use barrier for RingStateChangeItem (FRIB)
 	char DataFilePath[500];			// Output file data path
+	uint8_t EnableMaxFileSize;		// Enable the Limited size for list output files. Value set in MaxOutFileSize parameter
+	float MaxOutFileSize;			// Max size of list output files
+	uint8_t EnableRawDataRead;		// Enable the readout from RawData file
 	uint8_t OutFileUnit;			// Unit for time measurement in output files (0 = LSB, 1 = ns)
 	int EnableJobs;					// Enable Jobs
 	int JobFirstRun;				// First Run Number of the job
@@ -189,6 +202,7 @@ typedef struct Config_t {
 	int PresetCounts;				// Preset Number of counts (triggers)
 	int EventBuildingMode;			// Event Building Mode
 	int TstampCoincWindow;			// Time window (ns) in event buiding based on trigger Tstamp
+	int DataAnalysis;				// Data Analysis Enable/disable mask
 
 	int EHistoNbin;					// Number of channels (bins) in the Energy Histogram
 	int ToAHistoNbin;				// Number of channels (bins) in the ToA Histogram
@@ -219,11 +233,12 @@ typedef struct Config_t {
 	uint32_t Validation_Mask;						// Validation mask
 	uint32_t Validation_Mode;						// Validation Mode: 0=disabled, 1=positive (accept), 2=negative (reject)
 	uint32_t Counting_Mode;							// Counting Mode (Singles, Paired_AND)
-	uint32_t TrefWindow;							// Tref Windows in ns (Common start/stop)
+	float TrefWindow;								// Tref Windows in ns (Common start/stop)
 	float TrefDelay;								// Tref delay in ns (can be negative)
-	uint32_t PairedCnt_CoincWin;					// Self Trg Width in ns => Coinc window for the paired counting
+	uint32_t ChTrg_Width;							// Self Trg Width in ns => Coinc window for paired counting and trigger logic
+	uint32_t Tlogic_Width;							// TriggerLogic output width (0=linear)
 	uint32_t MajorityLevel;							// Majority Level
-	uint32_t PtrgPeriod;							// period in ns of the internal periodic trigger (dwell time)
+	float PtrgPeriod;							    // period in ns of the internal periodic trigger (dwell time)
 	uint32_t TestPulseSource;						// EXT, INT_T0, INT_T1, INT_PTRG, INT_SW
 	uint32_t TestPulseDestination;					// -1=ALL, -2=EVEN, -3=ODD or channel number (0 to 63) for single channel pulsing
 	uint32_t TestPulsePreamp;						// 1=LG, 2=HG, 3=BOTH
@@ -233,8 +248,9 @@ typedef struct Config_t {
 	uint32_t AnalogProbe[2];						// Analog probe in Citiroc (Preamp LG/HG, Slow Shaper HG/LG, Fast Shaper)
 	uint32_t DigitalProbe[2];						// Citiroc digital probe (peak Sens HG/LG) or other FPGA signal (start_conv, data_commit...)
 	uint32_t ProbeChannel[2];						// Probing channel
-	uint32_t Range_14bit;							// Use full 14 bit range for the A/D conversion
+	uint16_t Range_14bit;							// Use full 14 bit range for the A/D conversion
 	uint32_t TrgIdMode;								// Trigger ID: 0 = trigger counter, 1 = validation counter
+	uint32_t Enable_2nd_tstamp;						// Enable 2nd time stamp relative to the Tref signal
 
 	uint32_t ChEnableMask0[MAX_NBRD];				// Channel enable mask of Citiroc 0
 	uint32_t ChEnableMask1[MAX_NBRD];				// Channel enable mask of Citiroc 1
@@ -307,6 +323,7 @@ typedef struct RunVars_t {
 extern Config_t	WDcfg;				// struct containing all acquisition parameters
 extern RunVars_t RunVars;			// struct containing run time variables
 extern int handle[MAX_NBRD];		// board handles
+extern int cnc_handle[MAX_NCNC];	// concentrator handles
 //extern int ActiveCh, ActiveBrd;		// Board and Channel active in the plot
 extern int AcqRun;					// Acquisition running
 extern int AcqStatus;				// Acquisition Status

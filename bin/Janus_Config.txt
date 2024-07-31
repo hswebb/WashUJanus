@@ -36,11 +36,17 @@ JobLastRun                         5                   # Last Run of the Job
 RunSleep                           0 s                 # Wait Time between runs of a job
 EnableJobs                         0                   # Enable Jobs
 RunNumber_AutoIncr                 0                   # Run Number auto increment
+DataAnalysis					   ALL				   # Data Analysis Enable/disable mask. Options: ALL, CNT_ONLY, DISABLED
 DataFilePath                       DataFiles           # Destination folder to save the output files
 OF_OutFileUnit                     LSB                 # ToA and ToT unit. Options: LSB, ns
+OF_EnMaxSize                       0                   # Limited Max File List Size
+OF_MaxSize                         1 GB                # Max size of List files (in Bytes), minimum size allowed 1 kB
+OF_ListLL                          DISABLED            # Event List file (FERS_LL). WRITING: FERS_LL is writing the raw data to files. READING: FERS_LL is reading the raw data from files and process the events. Options: DISABLED, WRITING, READING
 OF_ListBin                         0                   # Event List file (binary)
 OF_ListAscii                       0                   # Event List file (ASCII)
+OF_ListCSV                         0                   # Event List file (CSV)
 OF_Sync                            0                   # List with BrdID-Tstamp-TrgID (for sync check)
+OF_ServiceInfo                     0                   # Service event info (temperature, Vmon, Imon, HVstatus)
 OF_RunInfo                         0                   # Run Info
 OF_SpectHisto                      0                   # PHA spectrum
 OF_ToAHisto                        0                   # ToA spectrum
@@ -63,12 +69,11 @@ VetoSource                         DISABLED            # The veto signal inhibit
 ValidationSource                   T0-IN               # Source of the trigger validation signal. It must arrive within the window is opened by the bunch trigger and closed after Tv ~= 120 ns + HoldDelay.. Options: SW_CMD, T0-IN, T1-IN
 ValidationMode                     DISABLED            # ACCEPT: Trigger validated by the signal in the val. window. REJECT: trigger rejected if no signal arrives in the val. window. Options: DISABLED, ACCEPT, REJECT. Options: DISABLED, ACCEPT, REJECT
 CountingMode                       SINGLES             # SINGLES: each channel counts its own self trigger. PAIRED_AND: couples of channels count in coincidence. Options: SINGLES, PAIRED_AND
-PairedCnt_CoincWin                 8 ns                # Coincidence window for Paired_And counting mode. Min = 8 ns, Max = 2032 ns, Step = 8 ns
-TrgIdMode                          TRIGGER_CNT         # Trigger ID mode: TRIGGER_CNT counts all triggers arrived to the board (accepted or not); VALIDATION_CNT counts validation signals (with or without associated trigger). Options: TRIGGER_CNT, VALIDATION_CNT
-CountingMode                       SINGLES             # SINGLES: each channel counts its own self trigger. PAIRED_AND: couples of channels count in coincidence
-PairedCnt_CoincWin                 8 ns                # Coincidence window for Paired_And counting mode. Min = 8 ns, Max = 2032 ns, Step = 8 ns
+ChTrg_Width		                   0 ns                # Coincidence window for Paired_And counting mode. Min = 8 ns, Max = 2032 ns, Step = 8 ns
 EnableCntZeroSuppr                 1                   # Enable the suppression of channels with 0 counts in COUNTING mode.
+TrgIdMode                          TRIGGER_CNT         # Trigger ID mode: TRIGGER_CNT counts all triggers arrived to the board (accepted or not); VALIDATION_CNT counts validation signals (with or without associated trigger). Options: TRIGGER_CNT, VALIDATION_CNT
 TriggerLogic                       OR64                # Trigger Logic (Combinatorial network with 64 self trigger inputs). Options: OR64, AND2_OR32, OR32_AND2, MAJ64, MAJ32_AND2
+Tlogic_Width                       0 ns                # TriggerLogic output width (0=linear)
 MajorityLevel                      3                   # Majority Level (1 to 64)
 PtrgPeriod                         1 ms                # Period of the internal periodic trigger
 TrefSource                         T1-IN               # Tref source for timing mode (common start/stop). Options: T0-IN, T1-IN, Q-OR, T-OR, PTRG, TLOGIC
@@ -76,7 +81,6 @@ TrefWindow                         1.0 us              # Tref window (gate) in t
 TrefDelay                          0 ns                # Tref delay in timing mode (can be negative)
 T0_Out                             BUNCHTRG            # T0_Out assignment. Options: T0-IN, BUNCHTRG, T-OR, TLOGIC, RUN, PTRG, BUSY, DPROBE, SQ_WAVE, TDL_SYNC, RUN_SYNC, ZERO
 T1_Out                             T1-IN               # T1_Out assignment. Options: T1-IN, BUNCHTRG, Q-OR, TLOGIC, RUN, PTRG, BUSY, DPROBE, SQ_WAVE, TDL_SYNC, RUN_SYNC, ZERO
-TrefDelay                          0 ns                # Tref delay in timing mode (can be negative)
 ChEnableMask0                      0xFFFFFFFF          # Channel enable mask (ch 0..31)
 ChEnableMask1                      0xFFFFFFFF          # Channel enable mask (ch 32..63)
 
@@ -85,7 +89,7 @@ ChEnableMask1                      0xFFFFFFFF          # Channel enable mask (ch
 # ------------------------------------------------------------------------------------------
 FastShaperInput                    HG-PA               # The fast shaper can be connected to High gain or Low gain preamp. Options: HG-PA, LG-PA
 TD_CoarseThreshold                 220                 # Timing Discriminator coarse threshold (common to all channels)
-TD_FineThreshold                   0                   # Timing Discriminator fine threshold (individual)
+TD_FineThreshold                   0                   # Timing Discriminator fine threshold (individual). Max = 15 (4 bits)
 Trg_HoldOff                        0 ns                # Trigger hold-off time (imposed dead time)
 Tlogic_Mask0                       0xFFFFFFFF          # Trigger Logic channel enable mask (ch 0..31)
 Tlogic_Mask1                       0xFFFFFFFF          # Trigger Logic channel enable mask (ch 32..63)

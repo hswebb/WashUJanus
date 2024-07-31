@@ -31,7 +31,7 @@
 #include "BinaryData_5202.h"
 #include "BinaryData_5203.h"
 
-#define VERSION     "2.0"
+#define VERSION     "3.2"
 
 // Acquisition Mode 5203 (CSTART/STOP and STREAMING as in 5202)
 #define ACQMODE_COMMONSTART 0x02            // The same for A5202
@@ -101,6 +101,8 @@ public:
 
     void ReadHeaderBinfileFERS(std::ifstream& binfile);
     void ComputeBinfileSizeFERS(std::ifstream& binfile);
+    void InitAnalisys(std::ifstream& binfile, std::ofstream& csvfile, uint8_t force_ns);
+
     std::streamoff GetEventsSize() { return t_BinaryDataFERS::t_totsize; };  // Return the size of the bin file containing the Events
     std::streamoff GetEventsBegin() { return std::streamoff(t_BinaryDataFERS::t_begin); };  // Return the file position where the Events start
 

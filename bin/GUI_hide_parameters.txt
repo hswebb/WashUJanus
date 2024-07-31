@@ -10,14 +10,17 @@ Job First Run			b
 Job Last Run			b
 Run Sleep				b
 Enable Jobs				b
-Event Building Mode		b
+Data Analysis			b
+Event Building Mode		ab
+Tstamp Coinc Window		ab
 Trg Time Window         b
 Veto Source				b45
 Validation Source		b2345
 Validation Mode			b2345
 Counting Mode			b1235
 Paired-Cnt Coinc Win	b01235
-Enable counts ZS		b01235
+Channel Trigger Width	b
+Enable Counts ZS		b01235
 
 Enable ToT				b045
 TrefDelay				045
@@ -31,7 +34,7 @@ QD Mask Chip 0			b
 QD Mask Chip 1			b
 ZS Threshold LG			b12345
 ZS Threshold HG			b12345
-MUX Clock Period		b2345
+MUX Clock Period		b234
 Trigger ID Mode			b2345
 Hold Delay				b2345
 

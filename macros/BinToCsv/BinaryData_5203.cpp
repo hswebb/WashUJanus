@@ -76,6 +76,10 @@ void t_BinaryData_5203::Init(uint8_t force_ns, uint8_t mode) {
     t_BinaryData_5203::t_tstamp_64 = 0;
     t_BinaryData_5203::t_trigger_ID = 0;
     t_BinaryData_5203::t_num_of_hit = 0;
+    t_BinaryData_5203::t_unit[0] = "LSB";
+    t_BinaryData_5203::t_unit[1] = "ns";
+    t_BinaryData_5203::t_unit_tstamp[0] = "LSB";
+    t_BinaryData_5203::t_unit_tstamp[1] = "us";
 }
 
 void t_BinaryData_5203::ReadHeaderBinfile(std::ifstream& binfile) {
@@ -175,22 +179,25 @@ void t_BinaryData_5203::WriteCsvHeader(std::ofstream& csvfile) {
     date.erase(std::remove(date.begin(), date.end(), '\n'), date.cend());
 
     uint8_t time_unit = t_time_unit || t_force_ns;
-    if (t_brd_ver)
-        csvfile << "Janus " << t_brd_ver << " Release " << t_s_sw_version << "\n";
-    else
-        csvfile << "Janus Release " << t_s_sw_version << "\n";
-    csvfile << "File Format Version " << t_s_data_version << "\n";
-    csvfile << t_BinaryData_5203::WriteAcqMode() << " \n";
-    csvfile << t_BinaryData_5203::WriteMeasMode() << " \n";
-    csvfile << "Time unit: " << t_BinaryData_5203::t_unit[time_unit] << " \n";
-    csvfile << "TStamp unit: " << t_BinaryData_5203::t_unit_tstamp[time_unit] << " \n";
-    csvfile << "ToA LSB value: " << t_ToA_LSB_ns * 1e3 << " ps\n";
-    csvfile << "ToT LSB value: " << t_ToT_LSB_ns * 1e3 << " ps\n";
-    csvfile << "TStamp LSB value: " << t_Tstamp_LSB_ns * 1e3 << " ns\n";
-    csvfile << "Run " << t_run_num << " started at " << date << "\n";
+    csvfile << "//************************************************\n";
+    if (t_brd_ver) {
+        csvfile << "//Board:" << t_brd_ver << "\n//File_Format_Version:" << t_s_data_version << "\n//Janus_Release " << t_s_sw_version << "\n";
+    } else {
+        csvfile << "//Janus Release " << t_s_sw_version << "\n";
+        csvfile << "//File Format Version " << t_s_data_version << "\n";
+    }
+    csvfile << "//Acquisition_Mode:" << t_BinaryData_5203::WriteAcqMode() << " \n";
+    csvfile << "//Measurement_Mode:" << t_BinaryData_5203::WriteMeasMode() << " \n";
+    csvfile << "//Time unit:" << t_BinaryData_5203::t_unit[time_unit] << " \n";
+    csvfile << "//TStamp unit:" << t_BinaryData_5203::t_unit_tstamp[time_unit] << " \n";
+    csvfile << "//ToA LSB value_ps:" << t_ToA_LSB_ns * 1e3 << "\n";
+    csvfile << "//ToT LSB value_ps:" << t_ToT_LSB_ns * 1e3 << "\n";
+    csvfile << "//TStamp LSB value_ns:" << t_Tstamp_LSB_ns * 1e3 << "\n";
+    csvfile << "//Run#:" << t_run_num << "\n";
+    csvfile << "//Start_Time_Epoch:" << t_start_run << "\nStart_Time_DateTime:" << date << "\n";
     if (t_acq_mode == ACQMODE_COMMONSTART || t_acq_mode == ACQMODE_COMMONSTOP)
-        csvfile << "TStamp_" << t_BinaryData_5203::t_unit_tstamp[time_unit] << ",Trigger_ID,Board_ID,CH_ID,ToA_" << t_BinaryData_5203::t_unit[time_unit];
-    else csvfile << "TStamp_" << t_BinaryData_5203::t_unit_tstamp[time_unit] << ",Trigger_ID,Board_ID,CH_ID,Edge,ToA_" << t_BinaryData_5203::t_unit[time_unit];
+        csvfile << "TStamp_" << t_BinaryData_5203::t_unit_tstamp[time_unit] << ",Trigger_ID,Board_Id,Num_hits,Ch_Id,ToA_" << t_BinaryData_5203::t_unit[time_unit];
+    else csvfile << "TStamp_" << t_BinaryData_5203::t_unit_tstamp[time_unit] << ",Trigger_ID,Board_Id,Num_hits,Ch_Id,Edge,ToA_" << t_BinaryData_5203::t_unit[time_unit];
     //std::cout << "TStamp unit: " << t_unit_tstamp[time_unit] << std::endl;
     
     if (t_meas_mode != MEASMODE_LEADONLY)
@@ -337,7 +344,7 @@ void t_BinaryData_5203::WriteTmpEvt(std::ofstream& csvfile) {
     for (uint32_t i = 0; i < t_ch_id.size(); ++i) {
         std::string s_data;
 
-        s_data += std::to_string(t_brd_id.at(i)) + "," + std::to_string(t_ch_id.at(i));
+        s_data += std::to_string(t_brd_id.at(i)) + "," + std::to_string(t_num_of_hit) + ',' + std::to_string(t_ch_id.at(i));
         if (t_acq_mode != ACQMODE_COMMONSTART && t_acq_mode != ACQMODE_COMMONSTOP)
             s_data += "," + std::to_string(t_edge.at(i));
 

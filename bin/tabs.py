@@ -7,6 +7,7 @@ import subprocess
 import time
 import os
 import re
+import json
 
 from threading import Thread, Lock
 
@@ -101,6 +102,9 @@ class TabsPanel():
 
 		self.AcqMode_Dict = {} # {"AcqMode0": 0, "AcqMode1": 1 ...}, for GUI visualization, making it more general
 
+		self.new_options = {}	# GUI parameter new options 
+		self.offline = False
+
 	def validate_ch(self, new_value):
 		if new_value.isdigit(): return int(new_value) < sh.MaxCh
 		elif not new_value: return True
@@ -117,6 +121,7 @@ class TabsPanel():
 		# ***************************************************************************************
 		self.Mtabs_nb = ttk.Notebook(parent)
 		self.Mtabs = {}
+		self.Mtabs_shown = {}
 		i = 0
 		for s in sections:
 			self.Mtabs[s] = ttk.Frame(self.Mtabs_nb)  #, width=sh.Win_Tabs_W, height=sh.Win_Tabs_H)
@@ -140,30 +145,44 @@ class TabsPanel():
 		nch_gr = 8  # num of channels per group
 
 		# find sections that require board and channel tabs (0=no tabs, 1=board tab only, 2=board and channel tabs)
-		tabmode = {s : 0 for s in sections}
+		self.tabmode = {s : 0 for s in sections}
 		for param in params.values():
 			if param.distr == 'c': 
-				tabmode[param.section] = 2
-				yrow[param.section] = 80
-			if param.distr == 'b' and tabmode[param.section] == 0: 
-				tabmode[param.section] = 1
-				yrow[param.section] = 40
+				self.tabmode[param.section] = 2
+				yrow[param.section] = 40 #68
+			if param.distr == 'b' and self.tabmode[param.section] == 0: 
+				self.tabmode[param.section] = 1
+				yrow[param.section] = 10 #16
 
 		# create TABs for boards and channels
 		self.BrdTabs_nb = {}
 		self.BrdTabs = {}
 		self.ChTabs_nb = {}
 		self.ChTabs = {}
+		self.GlbTab = {}
+		self.GlbFrame_nb = {s:ttk.Notebook(self.Mtabs[s]) for s in sections}
+		self.GlbFrame = {s:ttk.Frame(self.GlbFrame_nb[s]) for s in sections}
+		self.Level2nd_nb = {s:ttk.Notebook(self.GlbFrame[s]) for s in sections}
+		self.Level2nd = {s:ttk.Frame(self.Level2nd_nb[s]) for s in sections} 
 		for s in sections:
-			if tabmode[s] > 0 and s != 'Connect':
+			if self.tabmode[s] > 0 and s != 'Connect':
+				self.GlbFrame_nb[s].place(relx=0, rely=0, relwidth=1, relheight=1)   # to allign with boards 
+				self.GlbFrame_nb[s].add(self.GlbFrame[s], text="Global Settings")
+				self.GlbTab[s] = self.GlbFrame[s]
+
 				self.BrdTabs_nb[s] = ttk.Notebook(self.Mtabs[s])
-				self.aaa= ttk.Notebook(self.Mtabs[s])
+				self.aaa = ttk.Notebook(self.Mtabs[s])
 				self.aaa.winfo_geometry()
-				self.BrdTabs_nb[s].place(relx=256./sh.Win_W, rely=0, relwidth=float(sh.Win_Tabs_W-x_ch+49)/sh.Win_W, relheight=float(sh.Win_Tabs_H-12)/sh.Win_Tabs_H)  #  x=256, y=0)
+				self.BrdTabs_nb[s].place(relx=256./sh.Win_W, rely=0, relwidth=float(sh.Win_Tabs_W-x_ch+49)/sh.Win_W, relheight=float(sh.Win_Tabs_H)/sh.Win_Tabs_H)  #  x=256, y=0)
 				self.BrdTabs[s] = [ttk.Frame(self.BrdTabs_nb[s]) for i in sh.Boards] # , width=sh.Win_Tabs_W - x_ch + 40, height=sh.Win_Tabs_H - 40
 				for brd in sh.Boards: 
 					self.BrdTabs_nb[s].add(self.BrdTabs[s][brd], text=str("B" + str(brd)))
-				if tabmode[s] == 2:
+				if self.tabmode[s] == 2:
+					self.Level2nd_nb[s].place(relx=0, rely=0, relwidth=1, relheight=1)
+					self.Level2nd_nb[s].add(self.Level2nd[s], text="")
+					Frame(self.GlbFrame[s]).place(relx=0, rely=0, relwidth=1, relheight=0.1)
+					self.GlbTab[s] = self.Level2nd[s]
+
 					self.ChTabs[s] = []
 					self.ChTabs_nb[s] = []
 					for brd in sh.Boards:
@@ -173,18 +192,22 @@ class TabsPanel():
 						for gr in range(ngr):
 							self.ChTabs[s][brd].append(ttk.Frame(self.ChTabs_nb[s][brd]))  #  , width=sh.Win_Tabs_W - x_ch + 10, height=sh.Win_Tabs_H - 40
 							self.ChTabs_nb[s][brd].add(self.ChTabs[s][brd][gr], text='   ' + str(gr*nch_gr) + ':' + str((gr+1)*nch_gr-1)+ '   ')
+			else:
+				self.GlbTab[s] = self.Mtabs[s]
 
+		# for s in sections: 
+		# 	yrow[s] = 5
 		for param in params.values():
 			if param.section == 'Connect': # this has a separate management!
 				self.conn_path = [StringVar() for i in sh.Boards]
 				for brd in sh.Boards:
 					self.conn_path[brd].set(param.value[brd])
 				continue
-
-			tab = self.Mtabs[param.section]
+			
+			tab = self.GlbTab[param.section]  # self.Mtabs[param.section]
 			yd = yrow[param.section]  	# y position for parameter label and control (default setting)
-			yb = yd*14.1/13.1 - 24.756  # y position for relative placement (board setting)  yb = yd - 23 # y position for parameter label and control (board setting)
-			yc = yd*14.1/12.45 - 53.23  # y position for relative placement (channel setting) yd - 45 # y position for parameter label and control (channel setting)
+			yb = yd #*14.1/13.1 - 24.756  # y position for relative placement (board setting)  yb = yd - 23 # y position for parameter label and control (board setting)
+			yc = yd #*14.1/12.45 - 53.23  # y position for relative placement (channel setting) yd - 45 # y position for parameter label and control (channel setting)
 			yrow[param.section] += 25
 
 			m_xdef = x_def 
@@ -248,7 +271,8 @@ class TabsPanel():
 				# ------------------------------------------------------------------------------
 				# create controls for board params
 				# ------------------------------------------------------------------------------
-				if (param.distr == 'b'): 	 
+				if (param.distr == 'b'):
+					chn = 1
 					self.par_brd_svar[param.name] = []
 					self.par_brd_combo[param.name] = []
 					self.par_brd_checkbox[param.name] = []
@@ -258,19 +282,30 @@ class TabsPanel():
 					# height = sh.Win_Tabs_H
 					for brd in sh.Boards:
 						btab = self.BrdTabs[param.section][brd]
+						if self.tabmode[param.section] == 2:
+							chn = 8
+						
 						self.par_brd_svar[param.name].append(StringVar())
 						self.par_brd_svar[param.name][brd].set(param.value[brd])
 						self.par_brd_svar[param.name][brd].trace('w', lambda name, index, mode, param=param, brd=brd: self.update_brd_param(param, brd))
-						if param.type == 'c':  # Combobox    # before was par_def_....
-							self.par_brd_combo[param.name].append(ttk.Combobox(btab, textvariable=self.par_brd_svar[param.name][brd], state='readonly')) # , width=15
-							self.par_brd_combo[param.name][brd]['values'] = param.options
-							self.par_brd_combo[param.name][brd].place(relx=float(x_brd)/sh.Win_Tabs_W, rely=float(yb)/sh.Win_Tabs_H, relwidth=0.2, relheight=0.039) #x=x_brd, y=yb)#)  #   			
-						elif param.type == 'b':	# Boolean
-							self.par_brd_checkbox[param.name].append(Checkbutton(btab, variable=self.par_brd_svar[param.name][brd]))
-							self.par_brd_checkbox[param.name][brd].place(relx=float(x_brd)/sh.Win_Tabs_W, rely=float(yb)/sh.Win_Tabs_H)  #x=x_brd, y=yb)#
-						else:  # entry (string)
-							self.par_brd_entry[param.name].append(Entry(btab, textvariable=self.par_brd_svar[param.name][brd])) # , width=18
-							self.par_brd_entry[param.name][brd].place(relx=float(x_brd)/sh.Win_Tabs_W, rely=float(yb)/sh.Win_Tabs_H, relwidth=0.27, relheight=0.041) #x=x_brd, y=yb)# relx=float(x_brd)/sh.Win_Tabs_W, rely=float(yb)/height)#, relwidth=0.27, relheight=0.037)  #  
+						for tch in range(chn):
+							if chn == 8:
+								btab = self.ChTabs[param.section][brd][tch] 
+
+							if param.type == 'c':  # Combobox    # before was par_def_....
+								if tch == 0: self.par_brd_combo[param.name].append([])
+								self.par_brd_combo[param.name][brd].append(ttk.Combobox(btab, textvariable=self.par_brd_svar[param.name][brd], state='readonly')) # , width=15
+								self.par_brd_combo[param.name][brd][tch]['values'] = param.options
+								self.par_brd_combo[param.name][brd][tch].place(relx=float(x_brd)/sh.Win_Tabs_W, rely=float(yb)/sh.Win_Tabs_H, relwidth=0.2, relheight=0.039) #x=x_brd, y=yb)#)  #   			
+							elif param.type == 'b':	# Boolean
+								if tch == 0: self.par_brd_checkbox[param.name].append([])
+								self.par_brd_checkbox[param.name][brd].append(Checkbutton(btab, variable=self.par_brd_svar[param.name][brd]))
+								self.par_brd_checkbox[param.name][brd][tch].place(relx=float(x_brd)/sh.Win_Tabs_W, rely=float(yb)/sh.Win_Tabs_H)  #x=x_brd, y=yb)#
+							else:  # entry (string)
+								if tch == 0: self.par_brd_entry[param.name].append([])
+								self.par_brd_entry[param.name][brd].append(Entry(btab, textvariable=self.par_brd_svar[param.name][brd])) # , width=18
+								self.par_brd_entry[param.name][brd][tch].place(relx=float(x_brd)/sh.Win_Tabs_W, rely=float(yb)/sh.Win_Tabs_H, relwidth=0.27, relheight=0.041) #x=x_brd, y=yb)# relx=float(x_brd)/sh.Win_Tabs_W, rely=float(yb)/height)#, relwidth=0.27, relheight=0.037)  #  
+
 
 				# ------------------------------------------------------------------------------
 				# create variables and controls for channel settings
@@ -287,7 +322,8 @@ class TabsPanel():
 						for gr in range(ngr):
 							for i in range(nch_gr):
 								ch = gr * nch_gr + i
-								x = 2 + i * 81.5  #50
+								# x = 2 + i * 81.5  #50
+								x = x_brd + i * 81.5
 								ctab = self.ChTabs[param.section][brd][gr]
 								if param.type == 'm':
 									if ch == 0: self.par_ch_label[param.name].append([])
@@ -319,6 +355,9 @@ class TabsPanel():
 		
 		self.ypos_def = ypos
 
+		for k, v in self.Mtabs.items():
+			self.Mtabs_shown[k] = v
+
 		# ***************************************************************************************
 		# Add extra controls in some tabs
 		# ***************************************************************************************
@@ -329,6 +368,7 @@ class TabsPanel():
 		self.path_entry = []
 		self.info_pid = []
 		self.info_fpga_fwrev = []
+		self.fpga_fwver = ["" for i in sh.Boards]
 		self.info_board_model = []
 		self.info_uc_fwrev = []
 		self.brd_enable_cb = []
@@ -386,15 +426,15 @@ class TabsPanel():
 		# ------------------------------------------------------------
 		# Run Ctrl
 		# ------------------------------------------------------------
-		self.browse_button_outdir = Button(self.Mtabs["RunCtrl"], text='Browse', command=self.BrowseOutDir) # , width=14, height=1
-		self.browse_button_outdir.place(relx=650/sh.Win_Tabs_W, rely=(ypos['DataFilePath']-3)/sh.Win_Tabs_H, relwidth=109/sh.Win_Tabs_W, relheight=0.049)  #  x=270, y=ypos['DataFilePath']-3)
+		browse_button_outdir = Button(self.Mtabs["RunCtrl"], text='Browse', command=self.BrowseOutDir) # , width=14, height=1
+		browse_button_outdir.place(relx=650/sh.Win_Tabs_W, rely=(ypos['DataFilePath']-3)/sh.Win_Tabs_H, relwidth=109/sh.Win_Tabs_W, relheight=0.049)  #  x=270, y=ypos['DataFilePath']-3)
 
 		# Reset Jobs
-		last_col_idx = list(params.keys()).index("OutputFiles") - 2
-		last_col_name = list(params.keys())[last_col_idx]
+		#last_col_idx = list(params.keys()).index("OutputFiles") - 2
+		last_col_name = 'EnableJobs' #list(params.keys())[last_col_idx]
 		self.reset_job = Button(self.Mtabs["RunCtrl"], text="Reset Job", command=lambda:comm.SendCmd('j'))
-		self.reset_job.place(relx=10/sh.Win_Tabs_W, rely=(ypos[last_col_name]+30)/sh.Win_Tabs_H, relwidth=109/sh.Win_Tabs_W, relheight=0.049)
-		self.button_names[last_col_name] = [self.reset_job, 10/sh.Win_Tabs_W, (ypos[last_col_name]+30)/sh.Win_Tabs_H, 109/sh.Win_Tabs_W, 0.049]
+		self.reset_job.place(relx=140/sh.Win_Tabs_W, rely=(ypos[last_col_name]+50)/sh.Win_Tabs_H, relwidth=109/sh.Win_Tabs_W, relheight=0.049)
+		self.button_names[last_col_name] = [self.reset_job, 170/sh.Win_Tabs_W, (ypos[last_col_name]+80)/sh.Win_Tabs_H, 80/sh.Win_Tabs_W, 0.049]
 		tt.Tooltip(self.reset_job, text="Reset the Job. Active when jobs are enabled", wraplength=200)
 
 		# ------------------------------------------------------------
@@ -439,16 +479,21 @@ class TabsPanel():
 		# ------------------------------------------------------------
 		# AcqMode
 		# ------------------------------------------------------------
-		self.maskch = Button(self.Mtabs["AcqMode"], text='CHANNEL MASK', command=lambda:self.OpenMask("CHANNEL MASK", "AcqMode", "ChEnableMask"), width=14, height=2)
-		self.maskch.place(relx=380/sh.Win_Tabs_W, rely=ypos['ChEnableMask0']/sh.Win_Tabs_H, relwidth=109/sh.Win_Tabs_W, relheight=0.08) # x = 380, y = ypos['ChEnableMask0'])
-
+		# self.maskch = Button(self.Mtabs["AcqMode"], text='CHANNEL MASK', command=lambda:self.OpenMask("CHANNEL MASK", "AcqMode", "ChEnableMask"), width=14, height=2)
+		# self.maskch.place(relx=380/sh.Win_Tabs_W, rely=(ypos['ChEnableMask0'])/sh.Win_Tabs_H, relwidth=109/sh.Win_Tabs_W, relheight=0.08) # x = 380, y = ypos['ChEnableMask0'])
+		maskch = [Button(self.BrdTabs["AcqMode"][i], text='CHANNEL MASK', command=lambda:self.OpenMask("CHANNEL MASK", "AcqMode", "ChEnableMask"), width=14, height=2) for i in range(sh.MaxBrd)]
+		# maskch = []
+		# for i in range(sh.NumBrd):
+		# 	gianni = Button(self.BrdTabs["AcqMode"][i], text='CHANNEL MASK', command=lambda:self.OpenMask("CHANNEL MASK", "AcqMode", "ChEnableMask"), width=14, height=2)
+		# 	maskch.add(gianni)
+		
 		# ------------------------------------------------------------
 		# Discr
 		# ------------------------------------------------------------
-		self.maskqd = Button(self.Mtabs["Discr"], text='Q-DISCR MASK', command=lambda:self.OpenMask("Q-DISCR MASK", "Discr", "Q_DiscrMask"), width=14, height=2)
-		self.maskqd.place(relx=380/sh.Win_Tabs_W, rely=ypos['Q_DiscrMask0']/sh.Win_Tabs_H, relwidth=109/sh.Win_Tabs_W, relheight=0.08) # x = 380, y = ypos['Q_DiscrMask0'])
-		self.masktd = Button(self.Mtabs["Discr"], text='T-DISCR MASK', command=lambda:self.OpenMask("T-DISCR MASK", "Discr", "Tlogic_Mask"), width=14, height=2)
-		self.masktd.place(relx=380/sh.Win_Tabs_W, rely=ypos['Tlogic_Mask0']/sh.Win_Tabs_H, relwidth=109/sh.Win_Tabs_W, relheight=0.08) # x = 380, y = ypos['Tlogic_Mask0'])
+		maskqd = [Button(self.ChTabs["Discr"][i][j], text='Q-DISCR MASK', command=lambda:self.OpenMask("Q-DISCR MASK", "Discr", "Q_DiscrMask"), width=14, height=2) for i in sh.Boards for j in range(8)]
+		# self.maskqd.place(relx=380/sh.Win_Tabs_W, rely=ypos['Q_DiscrMask0']/sh.Win_Tabs_H, relwidth=109/sh.Win_Tabs_W, relheight=0.08) # x = 380, y = ypos['Q_DiscrMask0'])
+		masktd = [Button(self.ChTabs["Discr"][i][j], text='T-DISCR MASK', command=lambda:self.OpenMask("T-DISCR MASK", "Discr", "Tlogic_Mask"), width=14, height=2) for i in sh.Boards for j in range(8)]
+		# self.masktd.place(relx=380/sh.Win_Tabs_W, rely=ypos['Tlogic_Mask0']/sh.Win_Tabs_H, relwidth=109/sh.Win_Tabs_W, relheight=0.08) # x = 380, y = ypos['Tlogic_Mask0'])
 
 		# ------------------------------------------------------------
 		# HV
@@ -467,6 +512,7 @@ class TabsPanel():
 		self.Vmon = [0 for i in sh.Boards]
 		self.Imon = [0 for i in sh.Boards]
 		self.DTemp = [0 for i in sh.Boards]
+		self.HVTemp = [0 for i in sh.Boards]
 		self.BTemp = [0 for i in sh.Boards]
 		self.FPGATemp = [0 for i in sh.Boards]
 		self.HVcb_status = [IntVar() for i in sh.Boards]
@@ -490,13 +536,17 @@ class TabsPanel():
 			self.DTemp[brd] = Label(btab, width = 14, relief='groove')
 			self.DTemp[brd].place(relx=(x0+xs)/sh.Win_Tabs_W, rely=(y0*14.1/13.1)/sh.Win_Tabs_H, relwidth=169/sh.Win_Tabs_W, relheight=0.044)  #   x = x0 + xs, y = y0)x = x0 + xs, y = y0)
 			y0 += 25
-			Label(btab, text='Brd Temp').place(relx=x0/sh.Win_Tabs_W, rely=(y0*14.1/13.1)/sh.Win_Tabs_H)  # x=x0, y=y0)
-			self.BTemp[brd] = Label(btab, width = 14, relief='groove')
-			self.BTemp[brd].place(relx=(x0+xs)/sh.Win_Tabs_W, rely=(y0*14.1/13.1)/sh.Win_Tabs_H, relwidth=169/sh.Win_Tabs_W, relheight=0.044)  #   x = x0 + xs, y = y0)x = x0 + xs, y = y0)
+			Label(btab, text='HV Temp').place(relx=x0/sh.Win_Tabs_W, rely=(y0*14.1/13.1)/sh.Win_Tabs_H)  # x=x0, y=y0)
+			self.HVTemp[brd] = Label(btab, width = 14, relief='groove')
+			self.HVTemp[brd].place(relx=(x0+xs)/sh.Win_Tabs_W, rely=(y0*14.1/13.1)/sh.Win_Tabs_H, relwidth=169/sh.Win_Tabs_W, relheight=0.044)  #   x = x0 + xs, y = y0)x = x0 + xs, y = y0)
 			y0 += 25
 			Label(btab, text='FPGA Temp').place(relx=x0/sh.Win_Tabs_W, rely=(y0*14.1/13.1)/sh.Win_Tabs_H)  # x=x0, y=y0)
 			self.FPGATemp[brd] = Label(btab, width = 14, relief='groove')
 			self.FPGATemp[brd].place(relx=(x0+xs)/sh.Win_Tabs_W, rely=(y0*14.1/13.1)/sh.Win_Tabs_H, relwidth=169/sh.Win_Tabs_W, relheight=0.044)  #   x = x0 + xs, y = y0)x = x0 + xs, y = y0)
+			y0 += 25
+			Label(btab, text='Brd Temp').place(relx=x0/sh.Win_Tabs_W, rely=(y0*14.1/13.1)/sh.Win_Tabs_H)  # x=x0, y=y0)
+			self.BTemp[brd] = Label(btab, width = 14, relief='groove')
+			self.BTemp[brd].place(relx=(x0+xs)/sh.Win_Tabs_W, rely=(y0*14.1/13.1)/sh.Win_Tabs_H, relwidth=169/sh.Win_Tabs_W, relheight=0.044)  #   x = x0 + xs, y = y0)x = x0 + xs, y = y0)
 			y0 += 25
 			#self.HVupd.append(Button(btab, text='Update\nHV Monitor', command=lambda brd = brd : comm.SendCmd('h ' + str(brd)), width=12, height = 4))
 			#self.HVupd[brd].place(x = x0 + 180, y=ym)
@@ -572,10 +622,19 @@ class TabsPanel():
 
 		# *******************************************************************************************
 		# Save Additional Widget button - ypos is not used anymore
-		self.button_names = {"DataFilePath" : [self.browse_button_outdir, 580/sh.Win_Tabs_W, (ypos['DataFilePath']-3)/sh.Win_Tabs_H, 90/sh.Win_Tabs_W, 0.049], 
-							"ChEnableMask0" : [self.maskch, 380/sh.Win_Tabs_W, ypos['ChEnableMask0']/sh.Win_Tabs_H, 109/sh.Win_Tabs_W, 0.08], 
-							"Q_DiscrMask0" : [self.maskqd, 380/sh.Win_Tabs_W, ypos['Q_DiscrMask0']/sh.Win_Tabs_H, 109/sh.Win_Tabs_W, 0.08], 
-							"Tlogic_Mask0" : [self.masktd, 380/sh.Win_Tabs_W, ypos['Tlogic_Mask0']/sh.Win_Tabs_H, 109/sh.Win_Tabs_W, 0.08]}
+		self.button_names.update({"DataFilePath" : [browse_button_outdir, 595/sh.Win_Tabs_W, (ypos['DataFilePath']-3)/sh.Win_Tabs_H, 80/sh.Win_Tabs_W, 0.049], 
+							"ChEnableMask0" : [maskch, 200/sh.Win_Tabs_W, 2, 190/sh.Win_Tabs_W, 0.08], 
+							"Q_DiscrMask0" : [maskqd, 200/sh.Win_Tabs_W, 2, 190/sh.Win_Tabs_W, 0.08], 
+							"Tlogic_Mask0" : [masktd, 200/sh.Win_Tabs_W, 2, 190/sh.Win_Tabs_W, 0.08]})
+
+		# **************************************************************************
+		# Load the options for parameters affected by the GUI hide parameters file
+		# **************************************************************************
+		with open(sh.GUIParamOptions, "r") as f:
+			self.new_options = json.load(f)
+
+		self.StopUpdate = False
+
 
 
 	# ***************************************************************************************
@@ -675,16 +734,19 @@ class TabsPanel():
 		self.par_def_svar[param.name].set(valtoset)
 		return  self.isChanged(param, valtoset)
 
+
 	def remove_one_dot(self, param, tmpval, maxval, len_int=5, len_dec=14):
 		old_pos = int(param.default.find('.'))	# remove the new dot 
 		if tmpval[old_pos] != '.': return self.manage_float_format(param, (tmpval[::-1].replace('.', '', 1))[::-1], maxval, len_int, len_dec)
 		else: return self.manage_float_format(param, tmpval.replace('.', '', 1), maxval, len_int, len_dec)
+
 
 	def manage_float_format(self, param, tmpval, maxval, len_int=5, len_dec=14):	
 		# tmp_pos = tmpval.find('.')
 		if len(tmpval) < 3: return tmpval 	
 		if abs(float(tmpval)) < maxval: return tmpval 	# control that is below the maximum
 		else: return param.default.split(" ")[0]
+		
 		
 	def val_no_unit(self, param, tmp_val):
 		len_int = 5
@@ -713,7 +775,6 @@ class TabsPanel():
 
 	def update_def_param(self, param):
 		if self.StopUpdate: return
-
 		if param.name == "PresetTime": self.real_update_param(param)
 		# elif param.name == "EHistoNbin": # DNIN may it is not needed since it is implemented similarly in paramparser.c
 		# 	self.scale_ped_zs(param)
@@ -817,6 +878,7 @@ class TabsPanel():
 			self.info_pid[brd].config(text = bi[1], bg = 'light blue')
 			self.info_board_model[brd].config(text = bi[2], bg = 'light blue')
 			self.info_fpga_fwrev[brd].config(text = bi[3], bg = 'light blue')
+			self.fpga_fwver[brd] = bi[3].split(" ")[0]
 			self.info_uc_fwrev[brd].config(text = bi[4], bg = 'light blue')
 
 	def Params2Tabs(self, reloaded):  
@@ -864,9 +926,11 @@ class TabsPanel():
 				self.DTemp[brd].config(text='')
 				self.BTemp[brd].config(text='')
 				self.FPGATemp[brd].config(text='')
+				self.HVTemp[brd].config(text='')
 				self.info_pid[brd].config(text = "", bg = sh.BgCol)
 				self.info_board_model[brd].config(text = "", bg = sh.BgCol)
 				self.info_fpga_fwrev[brd].config(text = "", bg = sh.BgCol)
+				self.fpga_fwver[brd] = ""
 				self.info_uc_fwrev[brd].config(text = "", bg = sh.BgCol)
 				self.enable_brd_cb(brd)	# enabling checkbox with some text, if consecutive to another one
 				self.path_entry[brd].config(state=NORMAL)
@@ -880,7 +944,7 @@ class TabsPanel():
 				# self.brd_enable_cb[brd].config(state=NORMAL)
 			elif status == sh.ACQSTATUS_READY: # ready
 				#self.HVupd[brd].config(state=NORMAL)
-				self.HVcb[brd].config(state=NORMAL)
+				if not self.offline: self.HVcb[brd].config(state=NORMAL)
 				# self.enable_brd_cb(brd)
 				self.path_entry[brd].config(state=DISABLED)
 				self.brd_enable_cb[brd].config(state=DISABLED)
@@ -928,17 +992,19 @@ class TabsPanel():
 	# ***************************************************************************************
 	def UpdateHVTab(self, hvfullstring):	# DNIN: control over the brd index you are trying to turn on
 		# Take Num of board connected from connect tab
-		# Divide the message in x blocks of that length (7: brd, status, vmon, imon, dtemp itemp, fpgatemp)
+		# Divide the message in x blocks of that length (8: brd, status, vmon, imon, dtemp, itemp, fpgatemp)
+		# From SW 3.5.0 (8: brd, status, vmon, imon, dtemp, itemp, fpgatemp, pcbtemp)
 		# Do what is doing below
 		if len(hvfullstring) == 0: return
 
-		hvstring = hvfullstring.split()
-		num_brd = int(len(hvstring)/7)
-		for i in range(num_brd):
-			hvs = hvstring[7*i:7*(i+1)]
+		hvstring = hvfullstring.split("|")	# As many string as the board number 
+		num_brd = int(len(hvstring))
 
-		# hvs = hvstring.split()
+
+		for i in range(num_brd):
+			hvs = hvstring[i].split()
 			brd = int(hvs[0])
+
 			hv_on = int(hvs[1]) & 1
 			self.hvfail[brd] = (int(hvs[1]) >> 1) & 1
 			#if self.DisableOnOffUpdateCnt > 0:
@@ -948,11 +1014,16 @@ class TabsPanel():
 			else: self.HVcb_status[brd].set(0)
 			self.Vmon[brd].config(text=hvs[2] + ' V')
 			self.Imon[brd].config(text=hvs[3] + ' mA')
-			if float(hvs[4]) > 0 : 
+			if float(hvs[4]) >= 0 : 
 				if float(hvs[4]) > 1: self.DTemp[brd].config(text=hvs[4] + ' degC')
 				else: self.DTemp[brd].config(text='N.A.')
-			if float(hvs[5]) > 0 : self.BTemp[brd].config(text=hvs[5] + ' degC')
-			if float(hvs[6]) > 0 : self.FPGATemp[brd].config(text=hvs[6] + ' degC')
+			if float(hvs[5]) >= 0 : self.HVTemp[brd].config(text=hvs[5] + ' degC')
+			else: self.HVTemp[brd].config(text='N.A')
+			if float(hvs[6]) >= 0 : self.FPGATemp[brd].config(text=hvs[6] + ' degC')
+			else: self.FPGATemp[brd].config(text='N.A')
+			if float(hvs[7]) >= 0 and float(hvs[7]) < 125: self.BTemp[brd].config(text=hvs[7] + ' degC')   # Janus 3.5.0 will send 8 ch anyway
+			else: self.BTemp[brd].config(text='N.A.')
+			
 			vmon = float(hvs[2])
 			# if vmon > 7: self.hvon[brd] = 1
 			# else: self.hvon[brd] = 0
@@ -1028,13 +1099,14 @@ class TabsPanel():
 	# ***************************************************************************************
 	# Update Statistics Tab 
 	# ***************************************************************************************
-	def UpdateStatsTab(self, cmsg): 
+	def UpdateStatsTab(self, cmsg:str): 
+		cmsg = cmsg.rstrip()
 		if cmsg[0] == '0': return # exit, JanusC closed the comm forcibly 
 		if cmsg[1] == 'b':	# write only if the active Brd is the one sending data
-			if cmsg[2] == str(self.ActiveBrd.get()): self.update_stats = True
+			if cmsg[2:] == str(self.ActiveBrd.get()): self.update_stats = True
 			else: self.update_stats = False
 		if cmsg[1] == 'c':  # channel value
-			if (list(self.Mtabs)[self.Mtabs_nb.index('current')] == 'Statistics'):
+			if (list(self.Mtabs_shown)[self.Mtabs_nb.index('current')] == 'Statistics'):
 				for ch in range(64):
 					ss = cmsg[8*ch+2:8*ch+10]
 					if not self.update_stats: ss = '0.000'
@@ -1058,7 +1130,7 @@ class TabsPanel():
 				if not self.change_statistics.get(): self.GStatsLabel[i].place(relx=5./sh.Win_Tabs_W, rely=y0/sh.Win_Tabs_H)  #  x = 5, y = y0)
 				if not self.change_statistics.get(): self.GStats[i].place(relx=110./sh.Win_Tabs_W, rely=y0/sh.Win_Tabs_H)  #  x = 110, y = y0)
 		elif cmsg[1] == 'g':
-			if (list(self.Mtabs)[self.Mtabs_nb.index('current')] == 'Statistics'):
+			if (list(self.Mtabs_shown)[self.Mtabs_nb.index('current')] == 'Statistics'):
 				msg_spl = cmsg[2:].split("\t")
 				self.StatsTypeLabel.configure(text = msg_spl[0], bg = "white")
 				if not self.update_stats:
@@ -1070,7 +1142,7 @@ class TabsPanel():
 		elif cmsg[1] == 't': # channel Statistics title
 			self.StatsTypeLabel.configure(text = cmsg[2:], bg = "light yellow")
 		elif cmsg[1] == 'B':
-			if (list(self.Mtabs)[self.Mtabs_nb.index('current')] == 'Statistics'):
+			if (list(self.Mtabs_shown)[self.Mtabs_nb.index('current')] == 'Statistics'):
 				msg_spl = cmsg[2:].split()
 				msglen = len(self.AllBrdLabel)	# to shorten the variable name
 				if len(msg_spl)%6 == 0: mlen = 6
@@ -1272,9 +1344,21 @@ class TabsPanel():
 	def CloseTab(self, parent):
 		self.Mtabs_nb.destroy()
 
+
 	# ----------------------------------------------------------------
 	# BASIC / ADVANCED GUI view mode
 	# ----------------------------------------------------------------
+	# Change the options of combobox and spinbox from file
+	def set_new_options(self, param, jobenabled):	
+		if self.new_options[param.name]["type"] == 'job':
+			try: new_option = self.new_options[param.name][jobenabled]
+			except: new_option = []
+		else: new_option = []
+
+		if param.type == "c":
+			self.par_def_combo[param.name]['values'] = new_option
+
+
 	def forget_widget(self, param):
 		if params[param.name].type == 'm' or param.name == 'Open': return
 		if params[param.name].type == '-':
@@ -1291,13 +1375,19 @@ class TabsPanel():
 			elif params[param.name].distr == 'c': [self.par_ch_checkbox[param.name][brd][ch].place_forget() for brd in range(sh.MaxBrd) for ch in range(sh.MaxCh)]
 		else:
 			self.par_def_entry[param.name].place_forget()
-			if params[param.name].distr == 'b': [self.par_brd_entry[param.name][brd].place_forget() for brd in range(sh.MaxBrd)]
+			# TABMODE
+			nch_t = 1
+			if self.tabmode[param.section] == 2: nch_t = 8
+			if params[param.name].distr == 'b': [self.par_brd_entry[param.name][brd][tch].place_forget() for brd in range(sh.MaxBrd) for tch in range(nch_t)]
 			elif params[param.name].distr == 'c': [self.par_ch_entry[param.name][brd][ch].place_forget() for brd in range(sh.MaxBrd) for ch in range(sh.MaxCh)]
+
 
 	def remove_tabs_widget(self):
 		# Remove extra widgets
 		for key, item in self.button_names.items():
-			item[0].place_forget()
+			try: item[0].place_forget()
+			except:
+				[item[0][j].place_forget() for j in range(len(item))]
 		
 		# Remove widgets created with tabs
 		for param in params.values(): self.forget_widget(param)
@@ -1306,6 +1396,7 @@ class TabsPanel():
 			self.Mtabs_nb.add(self.Mtabs[s], text=' ' + s + ' ')
 			self.Mtabs_nb.forget(self.Mtabs[s])
 		
+
 	def load_par2remove(self, hiding_status, sel='h'):
 		hideparam = []
 		tabs_removal = []
@@ -1331,8 +1422,10 @@ class TabsPanel():
 						hideparam.append(h_n)					
 				elif tt[0] in sh.sections:	# rem
 					tabs_removal.append(h_n)
+		if self.offline: tabs_removal.append('Regs')
 		if sel=='h': return hideparam
 		else: return tabs_removal
+
 
 	def place_widgets(self, param, hideparam, yrow, x_def, x_brd):
 		ypos = {}
@@ -1340,25 +1433,27 @@ class TabsPanel():
 		if params[param.name].type == 'm' or param.name == 'Open': return
 		# Re-define the widget position
 		yd = yrow[param.section]  	# y position for parameter label and control (default setting)
-		yb = yd*14.1/13.1 - 24.756  # y position for relative placement (board setting)  yb = yd - 23 # y position for parameter label and control (board setting)
-		yc = yd*14.1/12.45 - 53.23  # y position for relative placement (channel setting) yd - 45 # y position for parameter label and control (channel setting)
+		yb = yd #*14.1/13.1 - 24.756  # y position for relative placement (board setting)  yb = yd - 23 # y position for parameter label and control (board setting)
+		yc = yd #*14.1/12.45 - 53.23  # y position for relative placement (channel setting) yd - 45 # y position for parameter label and control (channel setting)
 		yrow[param.section] += 25
 
 		m_xdef = x_def 
 		lx = 0
 		kk = yd
 		if param.name == "OutputFiles":
-			yrow[param.section] = 20
+			yrow[param.section] = 10
 			yd = yrow[param.section]
 			yrow[param.section] += 25
 			lx = 330
-		if param.name == "DataFilePath":
+		if param.name == "DataAnalysis":  # "DataFilePath":
 			kk = yd-3
-			m_xdef = 465
+			m_xdef = 480 #465
 			lx = 330
-		if "OF_" in param.name:
-			if 'FileUnit' in param.name: m_xdef = 465
-			else: m_xdef = 520
+		if "OF_" in param.name or 'DataFilePath' in param.name:
+			if 'FileUnit' in param.name: m_xdef = 480 #465 # or \
+				# 'OF_MaxSize' in param.name or \
+				# 'OF_ListLL' in param.name: m_xdef = 465
+			else: m_xdef = 480 #520
 			lx = 330
 		if "SourceID" in param.name:
 			m_xdef = 460
@@ -1375,7 +1470,10 @@ class TabsPanel():
 
 		# Replace everything except hideparam!
 		if param.name in self.button_names:
-			self.button_names[param.name][0].place(relx=self.button_names[param.name][1], rely=kk/sh.Win_Tabs_H, relwidth=self.button_names[param.name][3], relheight=self.button_names[param.name][4]) # x=self.button_names[param.name][1], y=yd)
+			try: self.button_names[param.name][0].place(relx=self.button_names[param.name][1], rely=(kk+self.button_names[param.name][2])/sh.Win_Tabs_H, relwidth=self.button_names[param.name][3], relheight=self.button_names[param.name][4]) # x=self.button_names[param.name][1], y=yd)
+			except:
+				for click in self.button_names[param.name][0]:
+					click.place(relx=self.button_names[param.name][1], rely=(kk+self.button_names[param.name][2])/sh.Win_Tabs_H, relwidth=self.button_names[param.name][3], relheight=self.button_names[param.name][4])
 
 		if params[param.name].type == '-':
 			if param.name.find("_BLANK") < 0: self.par_def_label[param.name].place(relx=lx/sh.Win_Tabs_W, rely=yd/sh.Win_Tabs_H) # x=0, y=yd)
@@ -1383,18 +1481,20 @@ class TabsPanel():
 		self.par_def_label[param.name].place(relx=lx/sh.Win_Tabs_W, rely=float(yd)/sh.Win_Tabs_H)  #   x=0, y=yd) x=0, y=yd)
 		if params[param.name].type == 'c': 
 			if params[param.name].distr == 'g': self.par_def_combo[param.name].place(relx=float(m_xdef)/sh.Win_Tabs_W, rely=float(yd)/sh.Win_Tabs_H, relwidth=0.163, relheight=0.039)  #   x=x_def, y=yd)
-			elif params[param.name].distr == 'b': [self.par_brd_combo[param.name][brd].place(relx=float(x_brd)/sh.Win_Tabs_W, rely=float(yb)/sh.Win_Tabs_H, relwidth=0.2, relheight=0.039) for brd in range(sh.MaxBrd)] #x=x_brd, y=self.yb) 
-			elif params[param.name].distr == 'c': [self.par_ch_combo[param.name][brd][ch].place(relx=(2+ch%8*81.5)/sh.Win_Tabs_W, rely=yc/sh.Win_Tabs_H, relwidth=0.11, relheight=0.041) for brd in range(sh.MaxBrd) for ch in range(sh.MaxCh)] # x=2 + ch%8 * 50, y=self.yc) 
+			elif params[param.name].distr == 'b': [self.par_brd_combo[param.name][brd].place(relx=float(x_brd)/sh.Win_Tabs_W, rely=float(yb)/sh.Win_Nb_H, relwidth=0.2, relheight=0.039) for brd in range(sh.MaxBrd)] #x=x_brd, y=self.yb) 
+			elif params[param.name].distr == 'c': [self.par_ch_combo[param.name][brd][ch].place(relx=(x_brd+ch%8*81.5)/sh.Win_Tabs_W, rely=yc/sh.Win_Tabs_H, relwidth=0.11, relheight=0.041) for brd in range(sh.MaxBrd) for ch in range(sh.MaxCh)] # x=2 + ch%8 * 50, y=self.yc) 
 		elif params[param.name].type == 'b':
 			# if "OF_" in param.name:
 			# 	m_xdef = 500
 			if params[param.name].distr == 'g': self.par_def_checkbox[param.name].place(relx=float(m_xdef)/sh.Win_Tabs_W, rely=float(yd)/sh.Win_Tabs_H)  #   x=x_def, y=yd)
-			elif params[param.name].distr == 'b': [self.par_brd_checkbox[param.name][brd].place(relx=float(x_brd)/sh.Win_Tabs_W, rely=float(yb)/sh.Win_Tabs_H) for brd in range(sh.MaxBrd)] #x=x_brd, y=yb) 
-			elif params[param.name].distr == 'c': [self.par_ch_checkbox[param.name][brd][ch].place(relx=(2+ch%8*81.5)/sh.Win_Tabs_W, rely=yc/sh.Win_Tabs_H) for brd in range(sh.MaxBrd) for ch in range(sh.MaxCh)] #x=2 + ch%8 * 50, y=yc) 
+			elif params[param.name].distr == 'b': [self.par_brd_checkbox[param.name][brd].place(relx=float(x_brd)/sh.Win_Tabs_W, rely=float(yb)/sh.Win_Nb_H) for brd in range(sh.MaxBrd)] #x=x_brd, y=yb) 
+			elif params[param.name].distr == 'c': [self.par_ch_checkbox[param.name][brd][ch].place(relx=(x_brd+ch%8*81.5)/sh.Win_Tabs_W, rely=yc/sh.Win_Tabs_H) for brd in range(sh.MaxBrd) for ch in range(sh.MaxCh)] #x=2 + ch%8 * 50, y=yc) 
 		else:
+			nch_t = 1
+			if self.tabmode[param.section] == 2: nch_t = 8
 			self.par_def_entry[param.name].place(relx=float(m_xdef)/sh.Win_Tabs_W, rely=float(yd)/sh.Win_Tabs_H, relwidth=0.163, relheight=0.039)  #   x=x_def, y=yd)
-			if params[param.name].distr == 'b': [self.par_brd_entry[param.name][brd].place(relx=float(x_brd)/sh.Win_Tabs_W, rely=float(yb)/sh.Win_Tabs_H, relwidth=0.27, relheight=0.041) for brd in range(sh.MaxBrd)] #x=x_brd, y=ybx=x_brd, y=yb) 
-			elif params[param.name].distr == 'c': [self.par_ch_entry[param.name][brd][ch].place(relx=(2+ch%8*81.5)/sh.Win_Tabs_W, rely=yc/sh.Win_Tabs_H, relwidth=0.11, relheight=0.041) for brd in range(sh.MaxBrd) for ch in range(sh.MaxCh)] #x=2 + ch%8 * 50, y=yc) 
+			if params[param.name].distr == 'b': [self.par_brd_entry[param.name][brd][ch].place(relx=float(x_brd)/sh.Win_Tabs_W, rely=float(yb)/sh.Win_Nb_H, relwidth=0.27, relheight=0.041) for brd in range(sh.MaxBrd) for ch in range(nch_t)] #x=x_brd, y=ybx=x_brd, y=yb) 
+			elif params[param.name].distr == 'c': [self.par_ch_entry[param.name][brd][ch].place(relx=(x_brd+ch%8*81.5)/sh.Win_Tabs_W, rely=yc/sh.Win_Tabs_H, relwidth=0.11, relheight=0.041) for brd in range(sh.MaxBrd) for ch in range(sh.MaxCh)] #x=2 + ch%8 * 50, y=yc) 
 		
 	def remove_label(self, hideparam):
 		en_button = {		# to enable the widget added to the GUI
@@ -1411,19 +1511,19 @@ class TabsPanel():
 			if val:
 				self.par_def_label[item[-1]].place_forget()
 
-	def load_tabs_widget(self, basic_advanced, acqmode):
+	def load_tabs_widget(self, basic_advanced, acqmode, jobenabled):
 		x_def = 140	# x-pos of default entry/combo
 		x_brd = 3	# x-pos of board entry/combo
 		x_ch = 300	# x-pos of channel entry/combo
-		yrow = {s: 20 for s in sections} # initial Y-position for default and channel rows (one variable per section)
-		tabmode = {s : 0 for s in sections}
+		yrow = {s: 10 for s in sections} # initial Y-position for default and channel rows (one variable per section)
+		tabmodel = {s : 0 for s in sections}
 		for param in params.values():
 			if param.distr == 'c': 
-				tabmode[param.section] = 2
-				yrow[param.section] = 80
-			if param.distr == 'b' and tabmode[param.section] == 0: 
-				tabmode[param.section] = 1
+				tabmodel[param.section] = 2
 				yrow[param.section] = 40
+			if param.distr == 'b' and tabmodel[param.section] == 0: 
+				tabmodel[param.section] = 1
+				yrow[param.section] = 10
 				
 		# Load inverse of rename (it can be with enumerate(self.param_rename))
 		self.rename_parname = {}
@@ -1439,12 +1539,16 @@ class TabsPanel():
 		hidetab = self.load_par2remove(my_hiding_status, 't')
 		for param in params.values():	# place everything that is not in gui file
 			self.place_widgets(param, hideparam, yrow, x_def, x_brd)
+			if param.name in list(self.new_options.keys()):
+				self.set_new_options(param, jobenabled)
 			
 		self.remove_label(hideparam)
+		self.Mtabs_shown.clear()
 		
 		for s in sections:	# remove the sections that are in the hiddenfile
 			if s in hidetab: continue # and basic_advanced == '0': continue
 			self.Mtabs_nb.add(self.Mtabs[s], text=' ' + s + ' ')
+			self.Mtabs_shown[s] = self.Mtabs[s]
 
 		
 	def update_guimode(self, basic_advanced, not_acq_ch=1):	
@@ -1456,6 +1560,7 @@ class TabsPanel():
 				f.write("# xNNN, where x=a, b, N=0 to 5 (multiple N allowed)\n")
 				f.write("# x: a=Advanced, b=Basic\n")
 				f.write("# N: SPECT=0, SPECT_TIME=1, TIME_CSTART=2, TIME_CSTOP=3, COUNT=4, WAVE=5 (see par_defs.txt for details)\n")
+				f.writE("# E: JobEnabled=J, JobNotEnabled=N")
 				f.write("# Es: Run Sleep			b01 (parameter removed in basic, spect and specttime modes\n")
 				f.write("# Please, use 'tab' for spacing param_name and hiding attriute\n")
 				f.write("# Param name		Hiding Attribute\n")
@@ -1463,6 +1568,9 @@ class TabsPanel():
 		acqmode = self.par_def_svar["AcquisitionMode"].get()
 		if acqmode not in self.AcqMode_Dict: return
 		tab_idx = self.Mtabs_nb.select() # get the tab currently selected
+
+		if int(self.par_def_svar["EnableJobs"].get()): jobenabled = 'J'
+		else: jobenabled = 'N'
 
 		#if not_acq_ch:
 		#	if basic_advanced == 'a': 
@@ -1474,7 +1582,7 @@ class TabsPanel():
 		#self.Output.yview_scroll(100, UNITS)
 
 		self.remove_tabs_widget()
-		self.load_tabs_widget(basic_advanced, acqmode)
+		self.load_tabs_widget(basic_advanced, acqmode, jobenabled)
 
 		# set tab Notebook to the last active one 
 		self.Mtabs_nb.select(tab_idx)

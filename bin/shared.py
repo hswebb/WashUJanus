@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------
 
 from tkinter import *
-import sys
+import os
 
 SocketLog = False
 
@@ -30,6 +30,7 @@ Win_StatBar_H = 30
 # Tabs Frame
 Win_Tabs_Y = Win_Ctrl_Y + Win_Ctrl_H
 Win_Tabs_H = Win_H - Win_Tabs_Y - Win_StatBar_H - 30
+Win_Nb_H = Win_Tabs_H
 Win_Tabs_X = 0
 Win_Tabs_W = Win_W-5
 
@@ -40,7 +41,7 @@ OkCol = 'green'   # defualt 'is fine' color
 
 # Versions
 Version = "5202"
-Release = "3.2.4 - 22/08/2023"
+Release = "3.6.0 - 14/05/2024"
 
 # Ranges
 MaxCh = 64
@@ -54,10 +55,21 @@ Boards = range(NumBrd)
 ImgPath = "..\\img\\"
 CfgFile = "Janus_Config.txt"
 GuiModeFile = "GUI_hide_parameters.txt"
+GUIParamOptions = "GUI_param_options.json"
 ActiveCh = 0
 ActiveBrd = 0
 params = {}  # dictionary of all parameters
 sections = []  # list of section
+
+# Macros
+LLDumpMsg = os.path.join("..", "macros", "LL_dump_msg.txt")
+
+STARTRUN_MODE = {
+    0: "ASYNC",
+    1: "CHAIN_T0",
+    2: "CHAIN_T1",
+    3: "TDL"
+}
 
 ACQSTATUS_DISCONNECTED = 0	    # offline
 ACQSTATUS_SOCK_CONNECTED = 1	# GUI connected through socket
