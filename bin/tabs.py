@@ -223,12 +223,6 @@ class TabsPanel():
 			if "OF_" in param.name:
 				m_xdef = 480
 				lx = 310
-			if param.name == "FRIB-specific_Settings":
-				m_xdef = 460
-				lx = 310
-			if param.name == "SourceID" or param.name == "RingBufferName" or param.name == "RunTitle":
-				m_xdef = 460
-				lx = 330
 
 			if param.type == '-':  # separator or labels
 				if param.name.find('_BLANK') < 0:	
@@ -1451,15 +1445,6 @@ class TabsPanel():
 				# 'OF_MaxSize' in param.name or \
 				# 'OF_ListLL' in param.name: m_xdef = 465
 			else: m_xdef = 480 #520
-			lx = 330
-		if "SourceID" in param.name:
-			m_xdef = 460
-			lx = 330
-		if param.name == "FRIB-specific_Settings":
-			m_xdef = 460
-			lx = 330
-		if param.name == "SourceID" or param.name == "RingBufferName" or param.name == "RunTitle":
-			m_xdef = 460
 			lx = 330
 
 		# Replace everything except hideparam!

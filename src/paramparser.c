@@ -1079,7 +1079,7 @@ int ParseConfigFile(FILE* f_ini, Config_t* WDcfg, bool fcall)
 		if (streq(str, "OF_RunInfo"))				WDcfg->OutFileEnableMask	= SETBIT(WDcfg->OutFileEnableMask, OUTFILE_RUN_INFO, GetInt(f_ini));
 		if (streq(str, "OF_ServiceInfo"))			WDcfg->OutFileEnableMask	= SETBIT(WDcfg->OutFileEnableMask, OUTFILE_SERVICE_INFO, GetInt(f_ini));
 		if (streq(str, "OF_MCS"))					WDcfg->OutFileEnableMask	= SETBIT(WDcfg->OutFileEnableMask, OUTFILE_MCS_HISTO, GetInt(f_ini));
-		if (streq(str, "OF_RingBuffer"))			WDcfg->OutFileEnableMask    = SETBIT(WDcfg->OutFileEnableMask, OUTFILE_RAW_DATA_RINGBUFFER, GetInt(f_ini));
+		if (streq(str, "RingBuffer"))			WDcfg->OutFileEnableMask    = SETBIT(WDcfg->OutFileEnableMask, OUTFILE_RAW_DATA_RINGBUFFER, GetInt(f_ini));
 		if (streq(str, "SourceID"))			        WDcfg->SourceID             = GetInt(f_ini);
 		if (streq(str, "RingBufferName"))			fscanf(f_ini, "%s", WDcfg->RingBufferName);
 		if (streq(str, "RunTitle"))					GetTitle(f_ini, WDcfg);
