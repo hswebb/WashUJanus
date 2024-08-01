@@ -57,7 +57,6 @@ OF_RingBuffer                      0                    # Data routed to a RingB
 SourceID                           0                    # Source ID in FRIBDAQ stack (FRIB)
 RingBufferName                     janus                # RingBuffer Name (FRIB)
 RunTitle                           test                 # Run title for RingStateChangeItem (FRIB)
-UseBarrier                         1                    # Use barrier for RingStateChangeItem (FRIB)
 
 # ------------------------------------------------------------------------------------------
 # AcqMode

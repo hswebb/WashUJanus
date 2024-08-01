@@ -94,7 +94,6 @@ OF_RingBuffer					0					g		b		# Data routed to a RingBuffer (FRIB)
 SourceID                        0                   g       d       # Source ID in FRIBDAQ stack (FRIB)
 RingBufferName					"janus"				g		s		# RingBuffer Name (FRIB)
 RunTitle						""					g		s		# Run title for RingStateChangeItem (FRIB)
-UseBarrier                      0					g       b       # Use barrier for RingStateChangeItem (FRIB)
 
 #---------------------------------------------------------------------------------------
 [AcqMode]

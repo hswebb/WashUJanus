@@ -17,7 +17,6 @@ OF_RingBuffer = Data routed to a RingBuffer (FRIB)
 SourceID = Source ID
 RingBufferName = RingBuffer Name
 RunTitle = Run Title
-UseBarrier = Use Barrier
 PresetTime = Preset Time
 PresetCounts = Preset Counts
 JobFirstRun = Job First Run

@@ -1072,15 +1072,6 @@ int RunTimeCmd(int c)
 		}
 	}
 
-	if (c == 'a') {
-		if (WDcfg.UseBarrier) {
-			printf("\nTurning OFF using barrier\n");
-		} else {
-			printf("\nTurning ON using barrier\n");
-		}
-		WDcfg.UseBarrier = !WDcfg.UseBarrier;
-	}
-
 	if (c == 'u') {
 		bool isEnabled = (WDcfg.OutFileEnableMask&0x8000) >> 15;
 		if (isEnabled) {
@@ -1106,7 +1097,6 @@ int RunTimeCmd(int c)
 			printf("[o] One shot plot\n");
 			printf("[r] Reset histograms\n");
 			printf("[u] Toggle use RingBuffer output (FRIB)\n");
-			printf("[a] Toggle use barrier in RingStateChangeItem (FRIB)\n");
 			printf("[i] Set source ID (FRIB)\n");
 			printf("[B] Set output RingBuffer name (FRIB)\n");
 			printf("[L] Set title for RingStateChangeItem (FRIB)\n");
@@ -1138,7 +1128,6 @@ int RunTimeCmd(int c)
 			printf("[o] One shot plot\n");
 			printf("[r] Reset histograms\n");
 			printf("[u] Toggle use RingBuffer output (FRIB)\n");
-			printf("[a] Toggle use barrier in RingStateChangeItem (FRIB)\n");
 			printf("[i] Set source ID (FRIB)\n");
 			printf("[B] Set output RingBuffer name (FRIB)\n");
 			printf("[L] Set title for RingStateChangeItem (FRIB)\n");

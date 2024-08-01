@@ -183,7 +183,7 @@ int CloseOutputFiles()
 	csv_srun = 0;
 
 	if (m_writeToRingBuffer) {
-		RBH_emitStateChangeToRing(false, WDcfg.UseBarrier);
+		RBH_emitStateChangeToRing(false, true);
 		m_writeToRingBuffer = false;
 	}
 	return 0;
@@ -349,7 +349,7 @@ int WriteListfileHeader() {
 
     // Genie - Copy of statements for of_list_b
     if (m_writeToRingBuffer) {
-        RBH_emitStateChangeToRing(true, WDcfg.UseBarrier);
+        RBH_emitStateChangeToRing(true, true);
 
         float tmpLSB = float(TOA_LSB_ns);
         uint16_t enbin = WDcfg.EHistoNbin;

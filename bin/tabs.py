@@ -229,9 +229,6 @@ class TabsPanel():
 			if param.name == "SourceID" or param.name == "RingBufferName" or param.name == "RunTitle":
 				m_xdef = 460
 				lx = 330
-			if param.name == "UseBarrier":
-				m_xdef = 480
-				lx = 330
 
 			if param.type == '-':  # separator or labels
 				if param.name.find('_BLANK') < 0:	
@@ -1463,9 +1460,6 @@ class TabsPanel():
 			lx = 330
 		if param.name == "SourceID" or param.name == "RingBufferName" or param.name == "RunTitle":
 			m_xdef = 460
-			lx = 330
-		if param.name == "UseBarrier":
-			m_xdef = 520
 			lx = 330
 
 		# Replace everything except hideparam!

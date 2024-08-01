@@ -1083,7 +1083,6 @@ int ParseConfigFile(FILE* f_ini, Config_t* WDcfg, bool fcall)
 		if (streq(str, "SourceID"))			        WDcfg->SourceID             = GetInt(f_ini);
 		if (streq(str, "RingBufferName"))			fscanf(f_ini, "%s", WDcfg->RingBufferName);
 		if (streq(str, "RunTitle"))					GetTitle(f_ini, WDcfg);
-		if (streq(str, "UseBarrier"))				WDcfg->UseBarrier           = GetInt(f_ini);
 		if (streq(str, "TstampCoincWindow"))		WDcfg->TstampCoincWindow	= (uint32_t)GetTime(f_ini, "ns");
 		if (streq(str, "PresetTime"))				WDcfg->PresetTime			= GetTime(f_ini, "s");
 		if (streq(str, "PresetCounts"))				WDcfg->PresetCounts			= GetInt(f_ini);

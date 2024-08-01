@@ -185,7 +185,6 @@ typedef struct Config_t {
 	int SourceID;                   // Source ID in FRIBDAQ stack (FRIB)
 	char RingBufferName[50];       // RingBuffer Name (FRIB)
 	char RunTitle[81];              // Run title for RingStateChangeItem (FRIB)
-	bool UseBarrier;                // Use barrier for RingStateChangeItem (FRIB)
 	char DataFilePath[500];			// Output file data path
 	uint8_t EnableMaxFileSize;		// Enable the Limited size for list output files. Value set in MaxOutFileSize parameter
 	float MaxOutFileSize;			// Max size of list output files
