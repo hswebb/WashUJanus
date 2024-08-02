@@ -2,6 +2,13 @@ import socket
 import sys
 import threading
 
+def process(message):
+  lines = message.splitlines(True)
+  if lines[0].startswith("info"):
+    print("".join(lines[1:]))
+  elif lines[0].startswith("error"):
+    eprint("".join(lines[1:]))
+
 def eprint(*args, **kwargs):
   print(*args, file=sys.stderr,**kwargs)
 
@@ -20,7 +27,7 @@ def start_client(host='localhost', port=41234):
     try:
       respond = sock.recv(1024).decode("utf-8").strip()
       if respond:
-        print(respond)
+        process(respond)
       else:
         break
     except:
@@ -40,7 +47,7 @@ def start_client(host='localhost', port=41234):
         try:
           respond = sock.recv(1024).decode("utf-8").strip()
           if respond:
-            print(respond)
+            process(respond)
           else:
             break
         except:
@@ -59,4 +66,4 @@ if __name__ == "__main__":
   elif argc == 3:
     start_client(argv[1], int(argv[2]))
   else:
-    print("== Wrong number of arguments!")
+    eprint("== Wrong number of arguments!")
