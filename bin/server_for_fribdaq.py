@@ -114,8 +114,6 @@ class MessageHandler(socketserver.BaseRequestHandler):
               self.info("== Saving setting changes before starting!")
               ctrl.b_apply.invoke()
 
-            print("== Beginning the run!")
-
             message = "\n"
             message += "====== FRINBDAQ-related run information ======\n"
             message += "      Ring: " + tabs.par_def_svar["RingBufferName"].get() + " (" + ("ON" if tabs.par_def_svar["RingBuffer"].get() else "OFF") + ")\n"
@@ -126,6 +124,7 @@ class MessageHandler(socketserver.BaseRequestHandler):
             message += "\n"
             message += "== Beginning the run!\n"
             self.info(message)
+            print(message)
 
             ctrl.bstart.invoke()
           else:
