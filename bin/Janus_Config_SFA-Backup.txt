@@ -39,7 +39,7 @@ RunNumber_AutoIncr                 0                    # Run Number auto increm
 RingBuffer                         1                    # Data to RingBuffer
 SourceID                           2                    # Source ID
 RingBufferName                     janus                # RingBuffer Name
-RunTitle                           Merge_Test_16October2024 # Run title for RingStateChangeItem
+RunTitle                           Merge_Test_14October2024 # Run title for RingStateChangeItem
 DataAnalysis                       ALL                  # Data Analysis Enable/disable mask. Options: ALL, CNT_ONLY, DISABLED
 DataFilePath                       DataFiles            # Destination folder to save the output files
 OF_OutFileUnit                     LSB                  # ToA and ToT unit. Options: LSB, ns
@@ -79,7 +79,7 @@ TrefSource                         T1-IN                # Tref source for timing
 TrefWindow                         800 ns               # Tref window (gate) in timing mode (common start/stop)
 TrefDelay                          -400 ns              # Tref delay in timing mode (can be negative)
 T0_Out                             RUN                  # T0_Out assignment. Options: T0-IN, BUNCHTRG, T-OR, TLOGIC, RUN, PTRG, BUSY, DPROBE, SQ_WAVE, TDL_SYNC, RUN_SYNC, ZERO
-T1_Out                             TLOGIC               # T1_Out assignment. Options: T1-IN, BUNCHTRG, Q-OR, TLOGIC, RUN, PTRG, BUSY, DPROBE, SQ_WAVE, TDL_SYNC, RUN_SYNC, ZERO
+T1_Out                             PTRG                 # T1_Out assignment. Options: T1-IN, BUNCHTRG, Q-OR, TLOGIC, RUN, PTRG, BUSY, DPROBE, SQ_WAVE, TDL_SYNC, RUN_SYNC, ZERO
 ChEnableMask0                      0xFFFFFFFF           # Channel enable mask (ch 0..31)
 ChEnableMask1                      0xFFFFFFFF           # Channel enable mask (ch 32..63)
 
@@ -87,12 +87,12 @@ ChEnableMask1                      0xFFFFFFFF           # Channel enable mask (c
 # Discr
 # ------------------------------------------------------------------------------------------
 FastShaperInput                    HG-PA                # The fast shaper can be connected to High gain or Low gain preamp. Options: HG-PA, LG-PA
-TD_CoarseThreshold                 250                  # Timing Discriminator coarse threshold (common to all channels)
+TD_CoarseThreshold                 10                   # Timing Discriminator coarse threshold (common to all channels)
 TD_FineThreshold                   0                    # Timing Discriminator fine threshold (individual)
 Hit_HoldOff                        0                    # Trigger hold-off time (imposed dead time)
 Tlogic_Mask0                       0xFFFFFFFF           # Trigger Logic channel enable mask (ch 0..31)
 Tlogic_Mask1                       0xFFFFFFFF           # Trigger Logic channel enable mask (ch 32..63)
-QD_CoarseThreshold                 320                  # Charge Discriminator coarse threshold (common to all channels)
+QD_CoarseThreshold                 300                  # Charge Discriminator coarse threshold (common to all channels)
 QD_FineThreshold                   0                    # Charge Discriminator fine threshold (individual)
 Q_DiscrMask0                       0xFFFFFFFF           # Q-OR Channel enable mask (ch 0..31)
 Q_DiscrMask1                       0xFFFFFFFF           # Q-OR Channel enable mask (ch 32..63)
@@ -121,11 +121,11 @@ MCSHistoNbin                       4K                   # Number of channels (bi
 # ------------------------------------------------------------------------------------------
 AnalogProbe0                       OFF                  # Select the signal connected to the analog probe0. Options: OFF, FAST, SLOW_LG, SLOW_HG, PREAMP_LG, PREAMP_HG
 DigitalProbe0                      OFF                  # Select the signal connected to the digital probe0. Options: OFF, PEAK_LG, PEAK_HG, HOLD, START_CONV, DATA_COMMIT, DATA_VALID, CLK_1024, VAL_WINDOW, T_OR, Q_OR
-ProbeChannel0                      51                   # Select the channel connected to the analog and digital probes0
+ProbeChannel0                      0                    # Select the channel connected to the analog and digital probes0
 AnalogProbe1                       OFF                  # Select the signal connected to the analog probe1. Options: OFF, FAST, SLOW_LG, SLOW_HG, PREAMP_LG, PREAMP_HG
 DigitalProbe1                      OFF                  # Select the signal connected to the digital probe1. Options: OFF, PEAK_LG, PEAK_HG, HOLD, START_CONV, DATA_COMMIT, DATA_VALID, CLK_1024, VAL_WINDOW, T_OR, Q_OR
 ProbeChannel1                      0                    # Select the channel connected to the analog and digital probes1
-TestPulseSource                    OFF                  # Select the source for the test pulse signal. Options: OFF, EXT, T0-IN, T1-IN, PTRG, SW-CMD
+TestPulseSource                    EXT                  # Select the source for the test pulse signal. Options: OFF, EXT, T0-IN, T1-IN, PTRG, SW-CMD
 TestPulseAmplitude                 1000                 # DAC setting for the internal test pulser (12 bit)
 TestPulseDestination               CH 1                 # Select which channels are connected to the test pulse input. Options: NONE, ALL, EVEN, ODD, CH 0, CH 1, CH 2, CH 3, CH 4, CH 5, CH 6, CH 7, CH 8, CH 9, CH 10, CH 11, CH 12, CH 13, CH 14, CH 15, CH 16, CH 17, CH 18, CH 19, CH 20, CH 21, CH 22, CH 23, CH 24, CH 25, CH 26, CH 27, CH 28, CH 29, CH 30, CH 31, CH 32, CH 33, CH 34, CH 35, CH 36, CH 37, CH 38, CH 39, CH 40, CH 41, CH 42, CH 43, CH 44, CH 45, CH 46, CH 47, CH 48, CH 49, CH 50, CH 51, CH 52, CH 53, CH 54, CH 55, CH 56, CH 57, CH 58, CH 59, CH 60, CH 61, CH 62, CH 63
 TestPulsePreamp                    HG                   # Test pulse can feed both HG and LG preamps or only one of them. Options: LG, HG, BOTH
@@ -135,14 +135,17 @@ TestPulsePreamp                    HG                   # Test pulse can feed bo
 # ******************************************************************************************
 # Board and Channel settings (overwrite default settings)
 # ******************************************************************************************
-ChEnableMask0[0]                   0xFFFFFFFF			#
+ChEnableMask0[0]                   0xFFFFFFFE			#
 ChEnableMask1[0]                   0xFFFFFFFF			#
+TD_CoarseThreshold[0]              400			#
 Tlogic_Mask0[0]                    0xFFFFFFFF			#
 Tlogic_Mask1[0]                    0xFFFFFFFF			#
+HV_IndivAdj[0][0]                  0			#
+TD_FineThreshold[0][1]             15			#
 HV_IndivAdj[0][2]                  134			#
 HV_IndivAdj[0][3]                  140			#
 HV_IndivAdj[0][5]                  133			#
-HV_IndivAdj[0][6]                  140			#
+HV_IndivAdj[0][6]                  126			#
 HV_IndivAdj[0][7]                  137			#
 HV_IndivAdj[0][9]                  128			#
 HV_IndivAdj[0][11]                 118			#
@@ -151,33 +154,37 @@ HV_IndivAdj[0][14]                 140			#
 HV_IndivAdj[0][15]                 126			#
 HV_IndivAdj[0][16]                 133			#
 HV_IndivAdj[0][19]                 128			#
-HV_IndivAdj[0][20]                 100			#
+HV_IndivAdj[0][20]                 130			#
 HV_IndivAdj[0][24]                 123			#
 HV_IndivAdj[0][25]                 123			#
 HV_IndivAdj[0][28]                 146			#
 HV_IndivAdj[0][29]                 92			#
 HV_IndivAdj[0][31]                 120			#
+HV_IndivAdj[0][33]                 102			#
 HV_IndivAdj[0][34]                 130			#
 HV_IndivAdj[0][35]                 100			#
 HV_IndivAdj[0][37]                 112			#
 HV_IndivAdj[0][39]                 108			#
 HV_IndivAdj[0][40]                 205			#
+TD_FineThreshold[0][40]            15			#
 HV_IndivAdj[0][43]                 109			#
 HV_IndivAdj[0][44]                 168			#
 HV_IndivAdj[0][45]                 101			#
 HV_IndivAdj[0][47]                 113			#
-HV_IndivAdj[0][49]                 200			#
+HV_IndivAdj[0][49]                 91			#
 HV_IndivAdj[0][51]                 89			#
 HV_IndivAdj[0][52]                 151			#
-HV_IndivAdj[0][54]                 118			#
+HV_IndivAdj[0][54]                 106			#
 HV_IndivAdj[0][55]                 112			#
 HV_IndivAdj[0][56]                 130			#
 HV_IndivAdj[0][57]                 94			#
 HV_IndivAdj[0][59]                 118			#
 HV_IndivAdj[0][61]                 92			#
+HV_IndivAdj[0][63]                 118			#
 HV_Vbias[1]                        55			#
 ChEnableMask0[1]                   0xFFFFFFFF			#
 ChEnableMask1[1]                   0xFFFFFFFF			#
+TD_CoarseThreshold[1]              550			#
 Tlogic_Mask0[1]                    0xFFFFFFFF			#
 Tlogic_Mask1[1]                    0xFFFFFFFF			#
 HV_IndivAdj[1][1]                  225			#
@@ -211,6 +218,7 @@ HV_IndivAdj[1][30]                 200			#
 HV_IndivAdj[1][31]                 240			#
 HV_IndivAdj[1][32]                 230			#
 HV_IndivAdj[1][33]                 210			#
+TD_FineThreshold[1][33]            15			#
 HV_IndivAdj[1][34]                 230			#
 HV_IndivAdj[1][35]                 170			#
 HV_IndivAdj[1][36]                 210			#
@@ -229,6 +237,7 @@ HV_IndivAdj[1][48]                 255			#
 HV_IndivAdj[1][50]                 170			#
 HV_IndivAdj[1][51]                 140			#
 HV_IndivAdj[1][52]                 240			#
+TD_FineThreshold[1][52]            15			#
 HV_IndivAdj[1][53]                 170			#
 HV_IndivAdj[1][54]                 140			#
 HV_IndivAdj[1][55]                 150			#

@@ -108,6 +108,8 @@
 #define PLOT_SCAN_THR					9
 #define PLOT_SCAN_HOLD_DELAY			10
 #define PLOT_MCS_TIME					11	// DNIN those value have to be sorted later
+#define PLOT_TOT_SUM                    12
+#define PLOT_TOT_SUM_FIB                13
 
 #define DATA_ANALYSIS_CNT				0x0001
 #define DATA_ANALYSIS_MEAS				0x0002

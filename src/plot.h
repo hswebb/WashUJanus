@@ -31,5 +31,6 @@ int PlotWave(WaveEvent_t *wev, char *title);
 int Plot2Dmap(int StatIntegral);
 int PlotStaircase();
 int PlotScanHoldDelay(int *newrun);
+int Plot2DSummary();
 
 #endif

@@ -260,10 +260,7 @@ int ConfigureFERS(int handle, int mode)
 			ret |= FERS_WriteRegister(handle, INDIV_ADDR(a_zs_hgthr, i), zs_thr_hg);
 		}
 
-		if (WDcfg.HV_Adjust_Range >= 0) {
-			uint16_t HV_adj_range = WDcfg.HV_Adjust_Range << 8;
-			ret |= FERS_WriteRegister(handle, INDIV_ADDR(a_hv_adj, i), HV_adj_range | WDcfg.HV_IndivAdj[brd][i]);
-		}
+		if (WDcfg.HV_Adjust_Range >= 0)	ret |= FERS_WriteRegister(handle, INDIV_ADDR(a_hv_adj, i), 0x100 | WDcfg.HV_IndivAdj[brd][i]);
 		else ret |= FERS_WriteRegister(handle, INDIV_ADDR(a_hv_adj, i), 0);
 		if (ret) break;
 	}
@@ -325,9 +322,8 @@ int ConfigureFERS(int handle, int mode)
 	for(i=0; i<WDcfg.GWn; i++) {
 		if (((int)WDcfg.GWbrd[i] < 0) || (WDcfg.GWbrd[i] == brd)) {
 			ret |= FERS_ReadRegister(handle, WDcfg.GWaddr[i], &d32);
-			uint32_t new_d32 = (d32 & ~WDcfg.GWmask[i]) | (WDcfg.GWdata[i] & WDcfg.GWmask[i]);
-			ret |= FERS_WriteRegister(handle, WDcfg.GWaddr[i], new_d32);
-			Con_printf("LCSm", "WriteReg: Brd=%d, Addr=%08X, Data=%08X, Mask=%08X (old=%08X, new=%08X)\n", brd, WDcfg.GWaddr[i], WDcfg.GWdata[i], WDcfg.GWmask[i], d32, new_d32);
+			d32 = (d32 & ~WDcfg.GWmask[i]) | (WDcfg.GWdata[i] & WDcfg.GWmask[i]);
+			ret |= FERS_WriteRegister(handle, WDcfg.GWaddr[i], d32);
 		}
 	}
 	if (ret) goto abortcfg;

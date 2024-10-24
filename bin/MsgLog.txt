@@ -1,0 +1,93 @@
+[1729201748161][JI]Console Socket connected
+[1729201748161][JI]*************************************************
+[1729201748161][JI]JanusC Rev 3.6.0 (14/05/2024)
+[1729201748161][JI]Readout Software for CAEN FERS-5200
+[1729201748161][JI]*************************************************
+[1729201748161][JI]Reading configuration file Janus_Config.txt
+[1729201748162][JI]Overwriting parameters from TimeReset_Timing.txt
+[1729201748162][JI]Reading Pixel Map pixel_map.txt
+[1729201748162][JI]
+--------------- Concentrator  0 ----------------
+[1729201748162][JI]Opening connection to usb:172.16.1.11:cnc
+[1729201748263][JI]Connected to Concentrator usb:172.16.1.11:cnc
+[1729201748356][JI]FPGA FW revision = 23.12.01.01-2-2
+[1729201748356][JI]SW revision = 2023.11.30.1
+[1729201748356][JI]PID = 51567
+[1729201748356][JI]Found 1 board(s) connected to TDlink n. 0
+[1729201748356][JI]
+------------------ Board  0 --------------------
+[1729201748356][JI]Opening connection to usb:172.16.1.11:tdl:0:0
+[1729201748520][JI]Connected to usb:172.16.1.11:tdl:0:0
+[1729201748550][JI]FPGA FW revision = 6.2 (Build = 8605)
+[1729201748550][JI]PID = 25796
+[1729201748550][JI]
+[1729201748556][JI]Total allocated memory = 44.48 MB
+[1729201748561][JI]Configuring Boards ... 
+[1729201748760][JI]WriteReg: Brd=0, Addr=01000024, Data=00000002, Mask=FFFFFFFF (old=00000000, new=00000002)
+[1729201748770][JI]Board 0 configured.
+[1729201748770][JI]Done.
+[1729201773014][JI]HV of Brd 0 is ON. Vset = 55.000 V, Vmon = 39.320 V, Imon = 0.005 mA
+[1729201791714][JI]Overwriting parameters from TimeReset_Timing.txt
+[1729201791714][JI]Config file reloaded
+[1729201791714][JI]Configuring Boards ... 
+[1729201791892][JI]WriteReg: Brd=0, Addr=01000024, Data=00000002, Mask=FFFFFFFF (old=00000002, new=00000002)
+[1729201791902][JI]Done.
+[1729202554210][JI]Run #117 stopped. Elapsed Time = 103.93 s
+[1729202560943][JI]HV of Brd 0 is OFF (Vmon = 45.502 V)
+[1729205715826][JI]HV of Brd 0 is ON. Vset = 55.000 V, Vmon = 51.997 V, Imon = 0.009 mA
+[1729205780751][JI]Overwriting parameters from TimeReset_Timing.txt
+[1729205780751][JI]Config file reloaded
+[1729205780751][JI]Configuring Boards ... 
+[1729205780940][JI]WriteReg: Brd=0, Addr=01000024, Data=00000002, Mask=FFFFFFFF (old=00000002, new=00000002)
+[1729205780950][JI]Done.
+[1729205795702][JI]Run #117 stopped. Elapsed Time = 14.48 s
+[1729205812375][JI]Overwriting parameters from TimeReset_Timing.txt
+[1729205812375][JI]Config file reloaded
+[1729205812375][JI]Configuring Boards ... 
+[1729205812559][JI]WriteReg: Brd=0, Addr=01000024, Data=00000002, Mask=FFFFFFFF (old=00000002, new=00000002)
+[1729205812569][JI]Done.
+[1729205998128][JI]Run #117 stopped. Elapsed Time = 36.39 s
+[1729206015116][JI]HV of Brd 0 is OFF (Vmon = 47.449 V)
+[1729206366228][JI]HV of Brd 0 is ON. Vset = 55.000 V, Vmon = 51.671 V, Imon = 0.003 mA
+[1729206403620][JI]Overwriting parameters from TimeReset_Timing.txt
+[1729206403620][JI]Config file reloaded
+[1729206403620][JI]Configuring Boards ... 
+[1729206403803][JI]WriteReg: Brd=0, Addr=01000024, Data=00000002, Mask=FFFFFFFF (old=00000002, new=00000002)
+[1729206403813][JI]Done.
+[1729206489588][JI]Overwriting parameters from TimeReset_Timing.txt
+[1729206489588][JI]Config file reloaded
+[1729206489588][JI]Configuring Boards ... 
+[1729206489766][JI]WriteReg: Brd=0, Addr=01000024, Data=00000002, Mask=FFFFFFFF (old=00000002, new=00000002)
+[1729206489776][JI]Done.
+[1729206560419][JI]Overwriting parameters from TimeReset_Timing.txt
+[1729206560419][JI]Config file reloaded
+[1729206560419][JI]Configuring Boards ... 
+[1729206560602][JI]WriteReg: Brd=0, Addr=01000024, Data=00000002, Mask=FFFFFFFF (old=00000002, new=00000002)
+[1729206560613][JI]Done.
+[1729206594991][JI]Overwriting parameters from TimeReset_Timing.txt
+[1729206594991][JI]Config file reloaded
+[1729206594991][JI]Configuring Boards ... 
+[1729206595173][JI]WriteReg: Brd=0, Addr=01000024, Data=00000002, Mask=FFFFFFFF (old=00000002, new=00000002)
+[1729206595183][JI]Done.
+[1729206618709][JI]Overwriting parameters from TimeReset_Timing.txt
+[1729206618709][JI]Config file reloaded
+[1729206618709][JI]Configuring Boards ... 
+[1729206618893][JI]WriteReg: Brd=0, Addr=01000024, Data=00000002, Mask=FFFFFFFF (old=00000002, new=00000002)
+[1729206618903][JI]Done.
+[1729206630043][JI]Overwriting parameters from TimeReset_Timing.txt
+[1729206630043][JI]Config file reloaded
+[1729206630043][JI]Configuring Boards ... 
+[1729206630228][JI]WriteReg: Brd=0, Addr=01000024, Data=00000002, Mask=FFFFFFFF (old=00000002, new=00000002)
+[1729206630238][JI]Done.
+[1729206660471][JI]Config file reloaded
+[1729206660471][JI]Configuring Boards ... 
+[1729206660666][JI]Done.
+[1729206801688][JI]Overwriting parameters from TimeReset_Timing.txt
+[1729206801688][JI]Config file reloaded
+[1729206801688][JI]Configuring Boards ... 
+[1729206801865][JI]WriteReg: Brd=0, Addr=01000024, Data=00000002, Mask=FFFFFFFF (old=00000002, new=00000002)
+[1729206801875][JI]Done.
+[1729207192436][JI]Run #117 stopped. Elapsed Time = 83.63 s
+[1729207198163][JI]HV of Brd 0 is OFF (Vmon = 46.469 V)
+[1729207884288][JI]Quitting ...
+[1729207884297][JI]Quitting...

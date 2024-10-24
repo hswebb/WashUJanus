@@ -1,0 +1,39 @@
+[1726762197092][JI]Console Socket connected
+[1726762197093][JI]*************************************************
+[1726762197093][JI]JanusC Rev 3.6.0 (14/05/2024)
+[1726762197093][JI]Readout Software for CAEN FERS-5200
+[1726762197093][JI]*************************************************
+[1726762197093][JI]Reading configuration file Janus_Config.txt
+[1726762197093][JI]Overwriting parameters from TimeReset_Timing.txt
+[1726762197093][JI]Reading Pixel Map pixel_map.txt
+[1726762197093][JI]
+--------------- Concentrator  0 ----------------
+[1726762197093][JI]Opening connection to usb:172.16.1.11:cnc
+[1726762197095][JI]Connected to Concentrator usb:172.16.1.11:cnc
+[1726762197184][JI]FPGA FW revision = 23.12.01.01-2-2
+[1726762197184][JI]SW revision = 2023.11.30.1
+[1726762197184][JI]PID = 51567
+[1726762197184][JI]Found 1 board(s) connected to TDlink n. 0
+[1726762197184][JI]Found 1 board(s) connected to TDlink n. 1
+[1726762197184][JI]
+------------------ Board  0 --------------------
+[1726762197184][JI]Opening connection to usb:172.16.1.11:tdl:0:0
+[1726762197334][JI]Connected to usb:172.16.1.11:tdl:0:0
+[1726762197362][JI]FPGA FW revision = 6.2 (Build = 8605)
+[1726762197362][JI]PID = 25796
+[1726762197362][JI]
+------------------ Board  1 --------------------
+[1726762197362][JI]Opening connection to usb:172.16.1.11:tdl:1:0
+[1726762197515][JI]Connected to usb:172.16.1.11:tdl:1:0
+[1726762197544][JI]FPGA FW revision = 6.2 (Build = 8605)
+[1726762197544][JI]PID = 25797
+[1726762197544][JI]
+[1726762197551][JI]Total allocated memory = 48.93 MB
+[1726762197556][JI]Configuring Boards ... 
+[1726762197755][JI]WriteReg: Brd=0, Addr=01000024, Data=00000002, Mask=0000000F (old=00000000, new=00000002)
+[1726762197765][JI]Board 0 configured.
+[1726762197961][JI]WriteReg: Brd=1, Addr=01000024, Data=00000002, Mask=0000000F (old=00000000, new=00000002)
+[1726762197971][JI]Board 1 configured.
+[1726762197971][JI]Done.
+[1726762256948][JI]Quitting ...
+[1726762256951][JI]Quitting...

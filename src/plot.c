@@ -41,6 +41,7 @@ const int debug = 0;
 #define PLOT_TYPE_2D_MAP		3
 #define PLOT_TYPE_SCAN_THR		4
 #define PLOT_TYPE_SCAN_DELAY	5
+#define PLOT_TYPE_SUMMARY       6
 
 #define LEG_VSPACE	0.0226
 
@@ -752,6 +753,121 @@ int PlotScanHoldDelay(int *newrun)	// DNIN: Would be useful to have a view of al
 	fprintf(plotpipe, "unset grid; set palette model CMY rgbformulae 15,7,3\n");
 	fprintf(plotpipe, "plot 'PlotData.txt' with image\n");
 	fflush(plotpipe);		
+	return 0;
+}
+
+// --------------------------------------------------------------------------------
+// Plot 2D Summary
+// --------------------------------------------------------------------------------
+int Plot2DSummary()
+{
+	if (plotpipe == NULL) return -1;
+
+	// Open debugging output file
+	FILE* debbuff;
+	if (debug) debbuff = fopen("gnuplot_debug_PHA.txt", "w");
+
+	// Declare and initialize variables
+	int brd, ch, i, x, y, ycalib, Nbin, pixz;
+	double la0, la1 = 0;
+	double a0, a1;
+	char yunit[50];
+	char tmp_rn[100];
+	static int LastNbin = 0, LastYcalib = 0;
+	static double LastA0 = 0, LastA1 = 0;
+	int zmax = 0;
+	Histogram1D_t* tempHisto;
+	FILE* pd;
+	
+	int max = 64;
+
+	// Common values
+	ycalib = RunVars.Xcalib;
+	sscanf(RunVars.PlotTraces[0], "%d %d %s", &brd, &ch, tmp_rn);
+	if (brd >= WDcfg.NumBrd) brd = 0;
+
+	// Plot type specific initialization
+	Nbin = 0;
+	if (RunVars.PlotType == PLOT_TOT_SUM) {
+		fprintf(plotpipe, "set title 'ToT Summary by Channel (board %d)'\n", brd);
+		if (debug) fprintf(debbuff, "set title 'ToT Summary by Channel (board %d)'\n", brd);
+	}
+	else if (RunVars.PlotType == PLOT_TOT_SUM_FIB) {
+		fprintf(plotpipe, "set title 'ToT Summary by Fiber (board %d)'\n", brd);
+		if (debug) fprintf(debbuff, "set title 'ToT Summary by Fiber (board %d)'\n", brd);
+	}
+	strcpy(yunit, Stats.H1_ToT[0][0].x_unit);
+	Nbin = Stats.H1_ToT[0][0].Nbin;
+	la0 = Stats.H1_ToT[brd][0].A[0];
+	la1 = Stats.H1_ToT[brd][0].A[1];
+	a0 = ycalib ? la0 : 0;
+	a1 = ycalib ? la1 : 1;
+
+	// Output histogram data to file
+	pd = fopen("PlotData.txt", "w");
+	for (x = 0; x < MAX_NCH; x++) {
+		i = (RunVars.PlotType == PLOT_TOT_SUM_FIB) ? ((x - (32 * (x / 32))) * 2) + (1 * (x / 32)) : x;
+		tempHisto = &Stats.H1_ToT[brd][i];
+		for (y = 0; y < Nbin; y++) {
+			pixz = tempHisto->H_data[y];
+			fprintf(pd, "%d %d %d\n", x, y, pixz);
+			if (zmax < pixz) zmax = pixz;
+		}
+		fprintf(pd, "\n");
+	}
+	fclose(pd);
+	if (zmax == 0) zmax = 1;
+
+	// Plot histogram
+	if ((LastPlotType != PLOT_TYPE_SUMMARY) || (LastNbin != Nbin) || (LastYcalib != ycalib) || (LastPlotName != RunVars.PlotType)
+		|| LastA0 != la0 || LastA1 != la1) {
+		fprintf(plotpipe, "clear\n");
+		fprintf(plotpipe, "set terminal wxt noraise title 'FERS Readout' size 1200,800 position 700,10\n");
+		if (RunVars.PlotType == PLOT_TOT_SUM)
+			fprintf(plotpipe, "set xlabel 'Channel #'\n");
+		if (RunVars.PlotType == PLOT_TOT_SUM_FIB)
+			fprintf(plotpipe, "set xlabel 'Fiber #'\n");
+		fprintf(plotpipe, "set xrange [-0.5:%f]\n", ((float)MAX_NCH) - 0.5);
+		fprintf(plotpipe, "bind x 'set [-0.5:%f]'\n", ((float)MAX_NCH) - 0.5);
+		fprintf(plotpipe, "set xtics auto\n");
+		fprintf(plotpipe, "set ytics auto\n");
+		fprintf(plotpipe, "unset logscale\n");
+		fprintf(plotpipe, "unset label\n");
+		if (ycalib && WDcfg.AcquisitionMode != ACQMODE_COUNT) {
+			fprintf(plotpipe, "set ylabel '%s'\n", yunit);
+			fprintf(plotpipe, "set yrange [%f:%f]\n", la0 - 0.5, (la0 + (float)(Nbin - 1) * la1) + 0.5);
+			fprintf(plotpipe, "bind y 'set yrange [%f:%f]'\n", la0 - 0.5, (la0 + (float)(Nbin - 1) * la1) + 0.5);
+		}
+		else {
+			fprintf(plotpipe, "set ylabel 'Channels'\n");
+			fprintf(plotpipe, "set yrange [-0.5:%f]\n", ((float)Nbin) - 0.5);
+			fprintf(plotpipe, "bind y 'set yrange [-0.5:%f]'\n", ((float)Nbin) - 0.5);
+		}
+		LastNbin = Nbin;
+		LastYcalib = ycalib;
+		LastPlotType = PLOT_TYPE_SUMMARY;
+		LastPlotName = RunVars.PlotType;
+		LastA0 = la0;
+		LastA1 = la1;
+	}
+	fprintf(plotpipe, "bind z 'set cbrange [0:%d]'\n", zmax);
+	fprintf(plotpipe, "set cbrange [0:%d]\n", zmax);
+	fprintf(plotpipe, "unset grid; set palette model CMY rgbformulae 7,5,15\n");
+	fprintf(plotpipe, "plot 'PlotData.txt' with image\n");
+	if (debug) {
+		fprintf(debbuff, "bind z 'set cbrange [0:%d]'\n", zmax);
+		fprintf(debbuff, "set cbrange [0:%d]\n", zmax);
+		fprintf(debbuff, "set title 'TESTING'\n");
+		fprintf(debbuff, "unset grid; set palette model CMY rgbformulae 7,5,15\n");
+		fprintf(debbuff, "plot 'PlotData.txt' with image\n");
+	}
+
+	fflush(plotpipe);
+	if (debug) {
+		fflush(debbuff);
+		fclose(debbuff);
+	}
+
 	return 0;
 }
 

@@ -1,0 +1,41 @@
+[1726762072537][JI]Console Socket connected
+[1726762072537][JI]*************************************************
+[1726762072537][JI]JanusC Rev 3.6.0 (14/05/2024)
+[1726762072537][JI]Readout Software for CAEN FERS-5200
+[1726762072537][JI]*************************************************
+[1726762072537][JI]Reading configuration file Janus_Config.txt
+[1726762072537][JI]Overwriting parameters from TimeReset_Debug.txt
+[1726762072538][JI]Reading Pixel Map pixel_map.txt
+[1726762072538][JI]
+--------------- Concentrator  0 ----------------
+[1726762072538][JI]Opening connection to usb:172.16.1.11:cnc
+[1726762072639][JI]Connected to Concentrator usb:172.16.1.11:cnc
+[1726762072732][JI]FPGA FW revision = 23.12.01.01-2-2
+[1726762072732][JI]SW revision = 2023.11.30.1
+[1726762072732][JI]PID = 51567
+[1726762072732][JI]Found 1 board(s) connected to TDlink n. 0
+[1726762072732][JI]Found 1 board(s) connected to TDlink n. 1
+[1726762072732][JI]
+------------------ Board  0 --------------------
+[1726762072732][JI]Opening connection to usb:172.16.1.11:tdl:0:0
+[1726762072899][JI]Connected to usb:172.16.1.11:tdl:0:0
+[1726762072932][JI]FPGA FW revision = 6.2 (Build = 8605)
+[1726762072932][JI]PID = 25796
+[1726762072932][JI]
+------------------ Board  1 --------------------
+[1726762072932][JI]Opening connection to usb:172.16.1.11:tdl:1:0
+[1726762073099][JI]Connected to usb:172.16.1.11:tdl:1:0
+[1726762073131][JI]FPGA FW revision = 6.2 (Build = 8605)
+[1726762073131][JI]PID = 25797
+[1726762073131][JI]
+[1726762073142][JI]Total allocated memory = 48.93 MB
+[1726762073151][JI]Configuring Boards ... 
+[1726762073359][JI]WriteReg: Brd=0, Addr=01000000, Data=AABBCCDD, Mask=0000FFFF (old=400C3102, new=400CCCDD)
+[1726762073359][JI]WriteReg: Brd=0, Addr=01000024, Data=00000002, Mask=FFFFFFFF (old=00000000, new=00000002)
+[1726762073369][JI]Board 0 configured.
+[1726762073575][JI]WriteReg: Brd=1, Addr=01000000, Data=AABBCCDD, Mask=0000FFFF (old=400C3102, new=400CCCDD)
+[1726762073575][JI]WriteReg: Brd=1, Addr=01000024, Data=00000002, Mask=FFFFFFFF (old=00000000, new=00000002)
+[1726762073586][JI]Board 1 configured.
+[1726762073586][JI]Done.
+[1726762097179][JI]Quitting ...
+[1726762097182][JI]Quitting...
